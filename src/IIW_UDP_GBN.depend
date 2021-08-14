@@ -1,0 +1,31 @@
+# depslib dependency file v1.0
+1628612105 source:/run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/main.c
+	<stdio.h>
+	<stdlib.h>
+	"gbn.h"
+
+1628612771 /run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/gbn.h
+	<stdbool.h>
+	<pthread.h>
+
+1628612771 source:/run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/gbn.h
+	<stdbool.h>
+	<pthread.h>
+
+1628610654 source:/run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/logger.c
+	<stdio.h>
+	<stdarg.h>
+	<string.h>
+	"logger.h"
+
+1628610629 /run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/logger.h
+
+1628610629 source:/run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/logger.h
+
+1628612677 source:/run/media/daniele/614F7D537CF390D4/corsi/IIW/progetto/IIW_UDP_GBN.git/trunk/src/gbn.c
+	<stdlib.h>
+	<errno.h>
+	<string.h>
+	"logger.h"
+	"gbn.h"
+

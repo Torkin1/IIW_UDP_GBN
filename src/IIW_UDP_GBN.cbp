@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="IIW_UDP_GBN" />
+		<Option makefile_is_custom="1" />
+		<Option execution_dir="../src" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/IIW_UDP_GBN" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/IIW_UDP_GBN" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="../README.md" />
+		<Unit filename="logic/gbn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="logic/gbn.h" />
+		<Unit filename="logic/logger.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="logic/logger.h" />
+		<Unit filename="logic/main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="test/testPacketize.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="test/testSuites.h" />
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
