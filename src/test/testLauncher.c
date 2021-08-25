@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include "testSuites.h"
-#include "../logic/logger.h"
+#include "logger/logger.h"
 
 #define SIGASSFLD SIGUSR1
 #define EXIT_ON_FAIL true
@@ -15,11 +15,11 @@
 typedef struct assertionFailureInfo{
 
     char *msg;
-    void (*cleanup) (void);
+    void (*onFailure) (void);
 
 } AssertionFailureInfo;
 //
-void assertEquals(const void* expected, const void* actual, size_t size, char *errorMsg, void (*cleanup)(void)){
+void assertEquals(const void* expected, const void* actual, size_t size, char *errorMsg, void (*onFailure)(void)){
 
     // compares bytes of values
     if (memcmp(expected, actual, size)){
@@ -27,12 +27,13 @@ void assertEquals(const void* expected, const void* actual, size_t size, char *e
         // raises failure of assertion
         AssertionFailureInfo *info = calloc(1, sizeof(AssertionFailureInfo));
         info ->msg = errorMsg;
-        info ->cleanup = cleanup;
+        info ->onFailure = onFailure;
 
-        union sigval *val = calloc(1, sizeof(union sigval));
-        val ->sival_ptr = info;
+        union sigval val = {0};
+        val.sival_ptr = info;
 
-        pthread_sigqueue(pthread_self(), SIGASSFLD, *val);
+        pthread_sigqueue(pthread_self(), SIGASSFLD, val);
+        free(info);
     }
 
 }
@@ -44,13 +45,12 @@ void assertionFailureHandler(int sig, siginfo_t *siginfo, void *ucontext){
     logMsg(I, "Test failed. Message: %s\n", info -> msg);
 
     // does cleanup instructed by test function
-    void (*cleanup)(void) = ((AssertionFailureInfo *)(siginfo ->si_ptr)) -> cleanup;
-    if (cleanup != NULL){
-        (*cleanup)();
+    void (*onFailure)(void) = ((AssertionFailureInfo *)(siginfo ->si_ptr)) -> onFailure;
+    if (onFailure != NULL){
+        onFailure();
     }
 
     // cleanup
-    free(info);
     if (EXIT_ON_FAIL){
         exit(EXIT_FAILURE);
     }
@@ -77,6 +77,8 @@ int main(){
     // test1();
     // test2();
     // ...
+
+    logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 
     return EXIT_SUCCESS;
 

@@ -283,7 +283,7 @@
 </html>
 </richcontent>
 </node>
-<node TEXT="\latex DevRTT = (1 - \beta)DevRTT + \beta \cdot \abs {ampleRTT - estimatedRTT}" ID="ID_1694344365" CREATED="1628000263906" MODIFIED="1628085653561" HGAP_QUANTITY="-529.7499837949877 pt" VSHIFT_QUANTITY="-596.9999822080141 pt"><richcontent TYPE="DETAILS">
+<node TEXT="\latex DevRTT = (1 - \beta)DevRTT + \beta \cdot |sampleRTT - estimatedRTT|" ID="ID_1694344365" CREATED="1628000263906" MODIFIED="1628087465095" HGAP_QUANTITY="-529.7499837949877 pt" VSHIFT_QUANTITY="-596.9999822080141 pt"><richcontent TYPE="DETAILS">
 
 <html>
   <head>
