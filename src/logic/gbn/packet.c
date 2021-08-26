@@ -113,11 +113,11 @@ int generateMsgId(){
 }
 
 // divides a message in a group of packets
-int packetize(void *msg, int n, Packet ***packetsAddr){
+int packetize(void *msg, int size, Packet ***packetsAddr){
 
     logMsg(D, "max data len is %d\n", calcMaxPacketDataLen());
-    int numOfFullPackets = n / calcMaxPacketDataLen();
-    int remain = n % calcMaxPacketDataLen();
+    int numOfFullPackets = size / calcMaxPacketDataLen();
+    int remain = size % calcMaxPacketDataLen();
     bool hasRemain = (remain != 0)? true : false;
     int numOfPackets = numOfFullPackets + (int) hasRemain;
 

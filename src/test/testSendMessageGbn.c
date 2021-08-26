@@ -8,7 +8,7 @@
 // tested with MTU = 20 and winsize = 10
 // see if packets are sent correctly using wireshark on loopback interface
 
-long int msg = "ciao a tutti!";
+char *msg = "ciao a tutti!";
 
 void testSendMessageGbn(){
 

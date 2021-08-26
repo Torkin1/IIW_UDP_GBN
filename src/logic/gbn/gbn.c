@@ -3,6 +3,7 @@
 #include "gbn/packet.h"
 #include "gbn/launchBattery.h"
 #include "gbn/sendTable.h"
+#include <stdlib.h>
 
 int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *msg, int size, void (*errorHandler)(SendError)){
 
@@ -16,7 +17,7 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     sendEntry ->dest_addr = dest_addr;
     sendEntry ->addrlen = addrlen;
     sendEntry ->errorHandler = errorHandler;
-    addToSendTable(getSendTableReference(), (*packets) ->header ->msgId, sendEntry);
+    addToSendTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
 
     // TODO: set up ACK receiver
 
@@ -26,6 +27,8 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
         logMsg(E, "sendMessageGbn: can't add packets to the battery\n");
         return -1;
     }
+
+    free(packets);
 
     return 0;
 

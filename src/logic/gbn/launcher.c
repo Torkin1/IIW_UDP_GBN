@@ -65,11 +65,13 @@ void fireLaunchPad(LaunchPad *currentPad){
 
     // TODO: packet shall be discarded with a probability of p. This is to simulate a loss event
 
-    // sends serialized packet
+    // serializes packet
     sendbuf = serializePacket(currentPad ->packet);
     sendbufSize = calcPacketSize(currentPad ->packet);
 
     // TODO: measure time needed for send to successfully return and update the upload time with that value.
+
+    // sends serialized packet
     if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->dest_addr, currentSendEntry ->addrlen)) < 0){
 
         err = errno;
@@ -80,6 +82,8 @@ void fireLaunchPad(LaunchPad *currentPad){
     // updates launch pad data
     currentPad ->status = SENT;
     currentPad ->launches ++;
+
+    free(sendbuf);
 
 }
 

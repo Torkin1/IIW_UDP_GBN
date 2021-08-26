@@ -29,7 +29,8 @@ typedef struct packet{
 Packet *newPacket();
 void destroyPacket(Packet *self);
 
-int packetize(void *msg, int n, Packet ***packetsAddr);
+int packetize(void *msg, int size, Packet ***packetsAddr);
+
 // return dynamically allocated byte array containing serialized packet
 uint8_t *serializePacket(Packet *packet);
 
