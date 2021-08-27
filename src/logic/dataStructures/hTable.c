@@ -157,8 +157,8 @@ void removeFromHashTable(HashTable *self, void* key, int keyLen){
                 if (memcmp(pair -> key, key, keyLen) == 0){
                     destroyPair(pair);
                     popLL(&currentEntryPointer, i, NULL);
+                    break;
                 }
-                i ++;
             }
         }
     }

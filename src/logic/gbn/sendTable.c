@@ -57,6 +57,7 @@ int craftKeyFromMsgId(int msgId, int **keyAddr){
 
     int keySize = sizeof(int);
     *keyAddr = calloc(1, keySize);
+    **keyAddr = msgId;
     return keySize;
 
 }

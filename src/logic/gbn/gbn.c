@@ -28,6 +28,8 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
         return -1;
     }
 
+    logMsg(D, "sendMessageGbn: packets added to the battery\n");
+
     free(packets);
 
     return 0;

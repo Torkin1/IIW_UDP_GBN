@@ -2,6 +2,7 @@
 #define SENDWINDOW_H_INCLUDED
 
 #include <pthread.h>
+#include <stdbool.h>
 
 // window used to choose which packets are to be sent from the queue
 typedef struct sendWindow{
@@ -14,6 +15,10 @@ typedef struct sendWindow{
 
 SendWindow *getSendWindowReference();
 void destroySendWindow(SendWindow *self);
+
+int calcAdaptiveWinSize();
+
+bool isInWindow(int i);
 
 
 #endif // SENDWINDOW_H_INCLUDED

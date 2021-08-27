@@ -71,6 +71,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="logic/gbn/sendWindow.h" />
+		<Unit filename="logic/logger/logger.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="logic/logger/logger.h" />
 		<Unit filename="logic/main.c">
 			<Option compilerVar="CC" />

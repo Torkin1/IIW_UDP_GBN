@@ -28,6 +28,11 @@ void destroyPacket(Packet *self){
 
 };
 
+/*
+    IMPORTANT!
+    the section below must be updated every time the Header struct changes
+*/
+
 // START SECTION /////////////////////////////////////////////////
 
 // this function must be updated every time the struct Header changes
@@ -49,6 +54,12 @@ int calcMaxPacketDataLen(){
 
 }
 
+int calcAckSize(){
+
+    return calcHeaderSize();
+
+}
+
 uint8_t *serializePacket(Packet *packet){
 
     void *serialized = calloc(calcPacketSize(packet), sizeof(uint8_t));
@@ -67,7 +78,9 @@ uint8_t *serializePacket(Packet *packet){
     currentByte += sizeof(int);
 
     // serializes data
-    memcpy(currentByte, packet ->data, packet ->header ->dataLen);
+    if (packet ->header ->dataLen != 0){
+        memcpy(currentByte, packet ->data, packet ->header ->dataLen);
+    }
 
     return serialized;
 
@@ -91,8 +104,10 @@ Packet *deserializePacket(uint8_t *bytes){
     currentByte += sizeof(int);
 
     // deserialized data is stored in a dynamically allocated buffer.
-    deserialized ->data = calloc(deserialized ->header ->dataLen, sizeof(uint8_t));
-    memcpy(deserialized ->data, currentByte, deserialized -> header ->dataLen);
+    if (deserialized -> header ->dataLen != 0){
+        deserialized ->data = calloc(deserialized ->header ->dataLen, sizeof(uint8_t));
+        memcpy(deserialized ->data, currentByte, deserialized -> header ->dataLen);
+    }
 
 
     return deserialized;
@@ -115,7 +130,7 @@ int generateMsgId(){
 // divides a message in a group of packets
 int packetize(void *msg, int size, Packet ***packetsAddr){
 
-    logMsg(D, "max data len is %d\n", calcMaxPacketDataLen());
+    logMsg(D, "packetize: max data len is %d\n", calcMaxPacketDataLen());
     int numOfFullPackets = size / calcMaxPacketDataLen();
     int remain = size % calcMaxPacketDataLen();
     bool hasRemain = (remain != 0)? true : false;
@@ -149,9 +164,4 @@ int packetize(void *msg, int size, Packet ***packetsAddr){
 
     return numOfPackets;
 }
-
-/*
-    IMPORTANT!
-    the section below must be updated every time the Header struct changes
-*/
 

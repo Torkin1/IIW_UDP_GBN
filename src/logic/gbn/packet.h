@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // max size of an IPv4 packet
-#define MTU 1500
+#define MTU 18 // default: 1500. Set to 18 if you want 1 byte as max data len
 
 // defines the base informative unit this protocol will use to send and receive data
 // Caution is needed when changing this structure because of serialization. Remember to update implementation accordingly
@@ -38,6 +38,7 @@ uint8_t *serializePacket(Packet *packet);
 Packet *deserializePacket(uint8_t *bytes);
 
 int calcHeaderSize();
+int calcAckSize();
 int calcPacketSize(Packet *p);
 
 #endif // PACKET_H_INCLUDED

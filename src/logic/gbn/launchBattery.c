@@ -109,10 +109,12 @@ int updateContiguousPads(int change){
 
 }
 
+
+
 // adds packets to launchbattery atomically
 int addToLaunchBatteryAtomically(Packet *packets[], int n){
 
-    logMsg(D, "about to add %d packets to battery\n", n);
+    logMsg(D, "addToLaunchBattery: about to add %d packets to battery\n", n);
 
     int err;
     if ((err = pthread_mutex_lock(&(getLaunchBatteryReference() ->lock)))){
@@ -124,7 +126,7 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
     // if there is not enough contiguous space, the packets will not be added
     if(!willTheyFit(n)){
 
-        logMsg(E, "addToLaunchBattery: %d packets to add, but only %d pads are available", n, getLaunchBatteryReference() ->contiguousPadsAvailable);
+        logMsg(E, "addToLaunchBattery: %d packets to add, but only %d pads are available\n", n, getLaunchBatteryReference() ->contiguousPadsAvailable);
         return -1;
     }
 
@@ -160,39 +162,12 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
         return -1;
     }
 
-    int currentBase, currentNextSeqNum;
-    currentBase = getSendWindowReference() ->base;
-    currentNextSeqNum = getSendWindowReference() ->nextSeqNum;
-
-    /*
-
-        since the battery has a cyclic structure, we can have two situations:
-
-                   b           n
-        1)    [x] [ ] [ ] [ ] [ ]     nextSeqNum > base, x is not in window
-
-                   n           b
-        2)    [x] [ ] [ ] [ ] [ ]     nextSeqNum < base, x is in window
-
-        isInWindow is set accordingly to whichever is the highest among base and nextSeqNum
-
-    */
-
-    bool isInWindow;
-
-    if (currentBase < currentNextSeqNum){
-        isInWindow = (start >= currentBase && start < currentNextSeqNum);
-    }
-    else {
-        isInWindow = (start >= currentBase && start < QUEUE_LEN) && (start >= 0 && start < currentNextSeqNum);
-    }
-
-    if (isInWindow){
-        if (notifyLauncher(NEW_PACKETS_IN_SEND_WINDOW, NULL)){
-            logMsg(E, "couldn't notify the launcher\n");
+    if (isInWindow(start)){
+        if (notifyLauncher(NEW_PACKETS_IN_SEND_WINDOW)){
+            logMsg(E, "addToLaunchBattery: couldn't notify the launcher\n");
             return -1;
         }
-        logMsg(D, "launcher notified about event %d\n", NEW_PACKETS_IN_SEND_WINDOW);
+        logMsg(D, "addToLaunchBattery: launcher notified about event %d\n", NEW_PACKETS_IN_SEND_WINDOW);
     }
 
     if ((err = pthread_mutex_unlock(&(getSendWindowReference() ->lock)))){

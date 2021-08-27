@@ -7,7 +7,7 @@
 
 
 // max num of packets that can occupy the queue
-#define QUEUE_LEN 100
+#define QUEUE_LEN 100   // must be much greater than sendWindow
 
 // Each launch pad can only be in one of the following statuses
 typedef enum launchPadStatus{
@@ -56,5 +56,8 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n);
 
 // tells if there is enough space in the battery for n packets
 bool willTheyFit(int n);
+
+// call this to keep track of contiguous pads in battery
+int updateContiguousPads(int change);
 
 #endif // LAUNCHBATTERY_H_INCLUDED

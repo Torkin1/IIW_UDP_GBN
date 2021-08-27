@@ -70,7 +70,7 @@ int popLL(Node **headAddr, int index, char **destination){
 	Node *previous = NULL;
 	if (*headAddr != NULL){
         Node *current = *headAddr;
-        if (index < lenLL(current) && index > 0){
+        if (index >= 0 && index < lenLL(current)){
 
             // travels list until it encounters node with given index
             for (int i = 0; i < index; i ++){
