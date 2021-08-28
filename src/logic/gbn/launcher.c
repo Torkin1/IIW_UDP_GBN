@@ -87,16 +87,22 @@ int fireLaunchPad(LaunchPad *currentPad)
     // TODO: measure time needed for send to successfully return and update the upload time with that value.
 
     // sends serialized packet
-    if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->dest_addr, currentSendEntry ->addrlen)) < 0)
+    if (!isJammed())
     {
+        if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->dest_addr, currentSendEntry ->addrlen)) < 0)
+        {
 
-        err = errno;
-        logMsg(E, "fireLaunchPad: sendto failed: %s\n", strerror(err));
-        return -1;
+            err = errno;
+            logMsg(E, "fireLaunchPad: sendto failed: %s\n", strerror(err));
+            return -1;
 
+        }
+        logMsg(D, "fireLaunchPad: launched packet with index %d\n", currentPad ->packet ->header ->index);
+
+    } else {
+
+        logMsg(E, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
     }
-
-    logMsg(D, "fireLaunchPad: launched packet with index %d\n", currentPad ->packet ->header ->index);
 
     // updates launch pad data
     currentPad ->status = SENT;

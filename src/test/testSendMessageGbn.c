@@ -34,7 +34,7 @@ void testSendMessageGbn(){
     ackAddr ->sin_port = ACK_LISTENING_PORT;
     ackAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    bool fakeSent = false;
+    bool fakeSent = true;
     for (int j = 0; j < 2; j ++){
         sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
 
@@ -65,10 +65,8 @@ void testSendMessageGbn(){
             }
             ack ->header ->msgId = j;
             buf = serializePacket(ack);
-            if (i != 5){
-                sendto(sendAckSocket, buf, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *) ackAddr, sizeof(struct sockaddr_in));
-                logMsg(D, "launched ack %d\n", ack ->header ->index);
-            }
+            sendto(sendAckSocket, buf, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *) ackAddr, sizeof(struct sockaddr_in));
+            logMsg(D, "launched ack %d\n", ack ->header ->index);
             sleep(1);
             free(buf);
             destroyPacket(ack);
