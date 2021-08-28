@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "gbn/launcher.h"
+#include "gbn/launchBattery.h"
 #include "gbn/packet.h"
 #include "logger/logger.h"
 #include <stdio.h>
@@ -57,7 +58,7 @@ void testSendMessageGbn(){
             if (i == 2 && !fakeSent){
                 i = 3;
             }
-            ack ->header ->index = i;
+            ack ->header ->index = (i + (14 * j)) % QUEUE_LEN;
             if (i == 3 && !fakeSent){
                 i = 1;
                 fakeSent = true;

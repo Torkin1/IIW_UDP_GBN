@@ -253,7 +253,7 @@ void listenForAcks()
                 // disordered acks must be discarded#
                 // FIXME: cumulative acks are discarded too
                 ackedIndex = ack ->header ->index;
-                bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && (lastIndexAcked - ackedIndex) <= getWinSize();
+                bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && ((lastIndexAcked - ackedIndex) <= getWinSize());
                 if (isIndexOutOfOrder)
                 {
                     logMsg(D, "listenForAcks: discarded ack out of order\n");
@@ -277,7 +277,7 @@ void listenForAcks()
                         updateContiguousPads(1);
 
                     }
-                    lastIndexAcked = (lastIndexAcked + 1) % QUEUE_LEN;
+                    lastIndexAcked = ackedIndex;
 
                     // if it's the last packet of the message we remove the corresponding entry from the send table
                     if (ackedIndex == ack -> header ->endIndex)
