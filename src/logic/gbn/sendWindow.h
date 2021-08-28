@@ -16,7 +16,7 @@ typedef struct sendWindow{
 SendWindow *getSendWindowReference();
 void destroySendWindow(SendWindow *self);
 
-int calcAdaptiveWinSize();
+int getWinSize();
 
 bool isInWindow(int i);
 

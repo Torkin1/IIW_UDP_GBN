@@ -4,6 +4,8 @@
 #include <string.h>
 #include "gbn/launchBattery.h"
 
+#define WINSIZE_DEFAULT 2
+
 static int winsize;
 
 // singleton send window
@@ -29,12 +31,28 @@ void destroySendWindow(SendWindow *self){
 
 }
 
+int getWinSize(){
+
+    return winsize;
+
+}
+
 int calcAdaptiveWinSize(){
 
     // TODO: actually calculate winsize
-    int res = 2;
+    int res = -1;
 
     return res;
+
+}
+
+int updateAdaptiveWinSize(float rtt){
+
+    int old = getWinSize();
+
+    // TODO:
+
+    return old;
 
 }
 
@@ -43,7 +61,7 @@ void initSendWindow(){
     sendWindow = newSendWindow();
 
     // sets up initial values for sendWindow according to winsize
-    winsize = calcAdaptiveWinSize();
+    winsize = WINSIZE_DEFAULT;
     sendWindow ->nextSeqNum = winsize;
 
 }

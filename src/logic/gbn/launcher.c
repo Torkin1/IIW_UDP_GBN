@@ -253,7 +253,7 @@ void listenForAcks()
                 // disordered acks must be discarded#
                 // FIXME: cumulative acks are discarded too
                 ackedIndex = ack ->header ->index;
-                bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && (lastIndexAcked - ackedIndex) <= calcAdaptiveWinSize();
+                bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && (lastIndexAcked - ackedIndex) <= getWinSize();
                 if (isIndexOutOfOrder)
                 {
                     logMsg(D, "listenForAcks: discarded ack out of order\n");
@@ -292,7 +292,7 @@ void listenForAcks()
                     // updates send window
                     newBase = (ackedIndex + 1) % QUEUE_LEN;
                     getSendWindowReference() ->base = newBase;
-                    getSendWindowReference() ->nextSeqNum = (newBase + calcAdaptiveWinSize()) % QUEUE_LEN;
+                    getSendWindowReference() ->nextSeqNum = (newBase + getWinSize()) % QUEUE_LEN;
 
                     // send window could now contain packets to send;
                     sendAllReadyPacketsInWindow();

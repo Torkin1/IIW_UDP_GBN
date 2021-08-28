@@ -42,13 +42,13 @@ NetworkParams *getNetworkParamsReference(){
 
 }
 
-void updateRTT(int sampleRTT){
+void updateRTT(float sampleRTT){
 
     // TODO:
 
 }
 
-void updateUploadTime(int uploadTime){
+void updateUploadTime(float uploadTime){
 
     // TODO:
 

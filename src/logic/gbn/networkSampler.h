@@ -6,8 +6,8 @@
 typedef struct networkParams {
 
     pthread_mutex_t lock;
-    int rtt;            // Round Trip Time
-    int uploadTime;     // L/R
+    float rtt;            // Round Trip Time
+    float uploadTime;     // L/R
 
 } NetworkParams;
 
