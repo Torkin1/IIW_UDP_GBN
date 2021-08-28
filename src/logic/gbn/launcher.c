@@ -13,10 +13,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include "gbn/packet.h"
-#include "gbn/sendWindow.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include "gbn/jammer.h"
 
 static pthread_t launcherId;
 static bool isLauncherAvailable;

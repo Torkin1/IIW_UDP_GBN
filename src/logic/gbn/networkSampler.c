@@ -1,4 +1,4 @@
-#include "networkSampler.h"
+#include "gbn/networkSampler.h"
 #include "logger/logger.h"
 #include <stdlib.h>
 #include <string.h>

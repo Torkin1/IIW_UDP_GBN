@@ -5,7 +5,6 @@
 #include <pthread.h>
 #include "gbn/packet.h"
 
-
 // max num of packets that can occupy the queue
 #define QUEUE_LEN 100   // must be much greater than sendWindow
 
@@ -59,5 +58,22 @@ bool willTheyFit(int n);
 
 // call this to keep track of contiguous pads in battery
 int updateContiguousPads(int change);
+
+// window used to choose which packets are to be sent from the queue
+typedef struct sendWindow{
+
+    int base;               // last non-acked packet index in window
+    int nextSeqNum;         // Index of first READY packet next to the last SENT packet in window
+    pthread_mutex_t lock;
+
+} SendWindow;
+
+SendWindow *getSendWindowReference();
+void destroySendWindow(SendWindow *self);
+
+int getWinSize();
+
+bool isInWindow(int i);
+
 
 #endif // LAUNCHBATTERY_H_INCLUDED

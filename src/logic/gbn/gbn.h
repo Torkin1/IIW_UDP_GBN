@@ -5,8 +5,6 @@
 #include <pthread.h>
 #include <sys/socket.h>
 
-#define LISTENING_PORT
-
 // Errors which can occur during a send
 typedef enum sendError {
 
