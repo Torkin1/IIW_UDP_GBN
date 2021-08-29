@@ -19,6 +19,7 @@ void cleanup(){
 
 void testSerialize(){
 
+    logMsg(D, "testSerialize: sizeof in_port_t is: %d\n", sizeof(in_port_t));
     p1 = newPacket();
     p1 ->data = calloc(strlen(msg) + 1, sizeof(char));
     memcpy(p1 -> data, msg, strlen(msg) + 1);
@@ -27,16 +28,17 @@ void testSerialize(){
     p1 ->header ->endIndex = 20;
     p1 ->header ->index = 3;
     p1 ->header ->msgId = 31;
+    p1 ->header ->ackPort = 255;
 
     buf = serializePacket(p1);
     p2 = deserializePacket(buf);
 
-    sprintf(errorMsg, "testSerialize: expected: %s, actual: %s\n", msg, (char *) p2 ->data);
+    sprintf(errorMsg, "testSerialize: expected: %d, actual: %d\n", p1 ->header ->ackPort, p2 ->header ->ackPort);
 
     assertEquals(
-                 msg,
-                 p2 ->data,
-                 strlen(msg) + 1,
+                 &(p1 ->header ->ackPort),
+                 &(p2 ->header ->ackPort),
+                 sizeof(in_port_t),
                  errorMsg,
                  cleanup
                  );

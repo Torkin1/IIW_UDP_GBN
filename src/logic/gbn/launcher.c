@@ -18,6 +18,7 @@
 #include <netinet/ip.h>
 #include "gbn/jammer.h"
 
+// launcher control thread data
 static pthread_t launcherId;
 static bool isLauncherAvailable;
 static pthread_cond_t isLauncherAvailableCond = PTHREAD_COND_INITIALIZER;
@@ -31,9 +32,7 @@ static bool isOldActSet = false;
 // socket ack listener
 static int listenAckSocket = -1;
 
-// remembers msgId of the last packet acked. This is useful for knowing all packets of a message have been successfully sent
-static int lastMsgIdSent = -1;
-
+// index in the battery of the last packed acked
 static int lastIndexAcked = -1;
 
 // gets the real time signal value corresponding to the provided launcher event
@@ -66,19 +65,28 @@ void launcherCleanup()
         }
     }
 
+    close(listenAckSocket);
+
 }
 
 int fireLaunchPad(LaunchPad *currentPad)
 {
 
     uint8_t *sendbuf;
-    int sendbufSize;
-    int err;
+    int sendbufSize, err;
+    struct sockaddr_in ackAddr;
+    socklen_t ackAddrLen = sizeof(struct sockaddr_in);
 
-    // dest addr can be retrieved in sorting table
+    // dest addr can be retrieved in send table
     SendEntry *currentSendEntry = getFromSendTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
 
-    // TODO: packet shall be discarded with a probability of p. This is to simulate a loss event
+    // writes in packet port number where the launcher will listen for acks
+    if (getsockname(listenAckSocket, &ackAddr, &ackAddrLen)){
+        err = errno;
+        logMsg(E, "fireLaunchPad: unable to get ack socket address: %s\n", strerror(err));
+        return -1;
+    }
+    currentPad ->packet ->header ->ackPort = ntohs(ackAddr.sin_port);
 
     // serializes packet
     sendbuf = serializePacket(currentPad ->packet);
@@ -86,9 +94,10 @@ int fireLaunchPad(LaunchPad *currentPad)
 
     // TODO: measure time needed for send to successfully return and update the upload time with that value.
 
-    // sends serialized packet
+    // packet shall be discarded with a probability of p. This is to simulate a loss event
     if (!isJammed())
     {
+        // sends serialized packet
         if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->dest_addr, currentSendEntry ->addrlen)) < 0)
         {
 
@@ -101,10 +110,10 @@ int fireLaunchPad(LaunchPad *currentPad)
 
     } else {
 
-        logMsg(E, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
+        logMsg(W, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
     }
 
-    // updates launch pad data
+    // updates launch pad stats
     currentPad ->status = SENT;
     currentPad ->launches ++;
 
@@ -221,6 +230,8 @@ void listenForAcks()
     int recvfromRes, base, ackedIndex, newBase;
     Packet *ack;
     LaunchPad *currentPad;
+
+    // launcher listens for acks for all its life
     while(isLauncherAvailable)
     {
 
@@ -256,8 +267,7 @@ void listenForAcks()
 
                 base = getSendWindowReference() ->base;
 
-                // disordered acks must be discarded#
-                // FIXME: cumulative acks are discarded too
+                // acks referred to already acked packets are discarded
                 ackedIndex = ack ->header ->index;
                 bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && ((lastIndexAcked - ackedIndex) <= getWinSize());
                 if (isIndexOutOfOrder)
@@ -290,7 +300,6 @@ void listenForAcks()
                     {
                         logMsg(D, "listenForAcks: message %d fully sent\n", ack ->header ->msgId);
                         removeFromSendTable(getSendTableReference(), ack -> header ->msgId);
-                        lastMsgIdSent = ack -> header ->msgId;
                     }
 
                     // TODO: timeout of oldest packet in window must be reset
@@ -327,15 +336,16 @@ void *launcher(void *args)
     // no need to join this thread
     pthread_detach(pthread_self());
 
-    // sets up listen socket
+
+    // sets up listen socket for acks
     listenAckSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     struct sockaddr_in addr;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_family = AF_INET;
-    addr.sin_port = ACK_LISTENING_PORT;
+    addr.sin_port = 0;  // port number is decided at runtime among free user ports
     bind(listenAckSocket, &addr, sizeof(struct sockaddr_in));
 
-    // before waiting, we let others know that the launcher thread is running
+    // we let others know that the launcher thread is running
     isLauncherAvailable = true;
     pthread_mutex_unlock(&launcherInitializerLock);
     pthread_cond_signal(&isLauncherAvailableCond);
@@ -343,7 +353,7 @@ void *launcher(void *args)
     // listens for incoming acks
     listenForAcks();
 
-    // just in case the thread isn't sht down properly
+    // cleanup
     logMsg(D, "launcher: I'm dying lol\n");
     launcherCleanup();
     return NULL;

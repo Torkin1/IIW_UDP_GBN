@@ -65,22 +65,18 @@ uint8_t *serializePacket(Packet *packet){
     void *serialized = calloc(calcPacketSize(packet), sizeof(uint8_t));
     uint8_t *currentByte = serialized;
 
-   // packet ->header ->ackPort = htons(packet ->header ->ackPort);
     // Members of Header listed here will be serialized in order
     memcpy(currentByte, &(packet ->header ->isAck), sizeof(bool));
     currentByte += sizeof(bool);
     memcpy(currentByte, &(packet ->header ->dataLen), sizeof(int));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->msgId), sizeof(int));
-  //  logMsg(D, "serializePacket: serialized msgId %02X%02X%02X%02X\n", *currentByte, *(currentByte + 1), *(currentByte + 2), *(currentByte + 3));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->index), sizeof(int));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->endIndex), sizeof(int));
-    logMsg(D, "serializePacket: serialized endIndex %02X%02X%02X%02X\n", *currentByte, *(currentByte + 1), *(currentByte + 2), *(currentByte + 3));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->ackPort), sizeof(in_port_t));
- //   logMsg(D, "serializePacket: serialized port %02X%02X\n", *currentByte, *(currentByte + 1));
     currentByte += sizeof(in_port_t);
 
     // serializes data

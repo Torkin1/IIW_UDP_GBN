@@ -16,65 +16,50 @@
 // see if packets are sent correctly using wireshark on loopback interface
 
 char *msg = "ciao a tutti!";
+static int lastIndexReceived = -1;
 
-// TODO: test case when acks arrive out of order
 void testSendMessageGbn(){
 
     int sendSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
     struct sockaddr_in *sendAddr = calloc(1, sizeof(struct sockaddr_in));
     sendAddr ->sin_family = AF_INET;
-    sendAddr ->sin_port = 32772;
+    sendAddr ->sin_port = htons(32772);
     sendAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    int sendAckSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
 
-    struct sockaddr_in *ackAddr = calloc(1, sizeof(struct sockaddr_in));
-    ackAddr ->sin_family = AF_INET;
-    ackAddr ->sin_port = ACK_LISTENING_PORT;
-    ackAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    int receiveSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    struct sockaddr_in *recvAddr = calloc(1, sizeof(struct sockaddr_in));
+    recvAddr ->sin_family = AF_INET;
+    recvAddr ->sin_port = htons(32772);
+    recvAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    bind(receiveSocket, (struct sockaddr*) recvAddr, sizeof(struct sockaddr_in));
 
-    bool fakeSent = true;
-    for (int j = 0; j < 2; j ++){
-        sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
-
-        logMsg(D, "about to send one ack per sec in ");
-        for (int i = 5; i > 0; i --)
-        {
-            printf("%d ", i);
-            fflush(0);
-            sleep(1);
+    int sendAckSocket = -1;
+    struct sockaddr_in *ackAddr;
+    uint8_t buf[1024], *buf2;
+    while(true){
+        recvfrom(receiveSocket, buf, 1024, 0, NULL, NULL);
+        Packet *p = deserializePacket(buf);
+        if (p ->header ->index - lastIndexReceived != 1){
+            continue;
         }
-        printf("\n");
-        Packet *ack;
-        uint8_t *buf;
-        for (int i = 0; i < 14 ; i ++)
-        {
+        lastIndexReceived = p ->header ->index;
+        if (sendAckSocket < 0){
+            sendAckSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            ackAddr = calloc(1, sizeof(struct sockaddr_in));
+            ackAddr ->sin_family = AF_INET;
+            ackAddr ->sin_port = htons(p ->header ->ackPort);
+            ackAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-            ack = newPacket();
-            ack ->header ->dataLen = 0;
-            ack ->header ->endIndex = strlen(msg);
-            ack ->header ->isAck = true;
-            if (i == 2 && !fakeSent){
-                i = 3;
-            }
-            ack ->header ->index = (i + (14 * j)) % QUEUE_LEN;
-            if (i == 3 && !fakeSent){
-                i = 1;
-                fakeSent = true;
-            }
-            ack ->header ->msgId = j;
-            buf = serializePacket(ack);
-            sendto(sendAckSocket, buf, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *) ackAddr, sizeof(struct sockaddr_in));
-            logMsg(D, "launched ack %d\n", ack ->header ->index);
-            sleep(1);
-            free(buf);
-            destroyPacket(ack);
         }
+        Packet *ack = newPacket();
+        ack ->header ->isAck = true;
+        ack ->header ->index = p ->header ->index;
+        ack ->header ->endIndex = p ->header ->endIndex;
+        ack ->header ->msgId = p ->header ->msgId;
+        buf2 = serializePacket(ack);
+        sendto(sendAckSocket, buf2, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *) ackAddr, sizeof(struct sockaddr_in));
+        logMsg(D, "testSendMessageGbn: launched ack %d to port %d\n", ack ->header ->index, p ->header ->ackPort);
     }
-    pause();
-
-
-
-
 }

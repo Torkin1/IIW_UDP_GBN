@@ -19,8 +19,6 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     sendEntry ->errorHandler = errorHandler;
     addToSendTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
 
-    // TODO: set up ACK receiver
-
     // adds the packets atomically to the battery
     if (addToLaunchBatteryAtomically(packets, numOfPackets)){
 

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define JAM_RATE 50
+#define JAM_RATE 0
 
 bool isJammed(){
 
@@ -17,7 +17,7 @@ bool isJammed(){
 
     int r = rand() % 100;
     bool res = r < JAM_RATE;
-    return (r) < JAM_RATE;
+    return res;
 
 }
 
