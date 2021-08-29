@@ -47,6 +47,10 @@
 			<Option compile="1" />
 			<Option link="1" />
 		</Unit>
+		<Unit filename="logic/gbn/jammer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="logic/gbn/jammer.h" />
 		<Unit filename="logic/gbn/launchBattery.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -67,10 +71,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="logic/gbn/sendTable.h" />
-		<Unit filename="logic/gbn/sendWindow.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="logic/gbn/sendWindow.h" />
 		<Unit filename="logic/logger/logger.c">
 			<Option compilerVar="CC" />
 		</Unit>
