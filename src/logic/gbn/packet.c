@@ -38,7 +38,7 @@ void destroyPacket(Packet *self){
 // this function must be updated every time the struct Header changes
 int calcHeaderSize(){
 
-    return sizeof(bool) + 4 * sizeof(int);
+    return sizeof(bool) + (4 * sizeof(int)) + sizeof(in_port_t);
 
 }
 
@@ -65,17 +65,23 @@ uint8_t *serializePacket(Packet *packet){
     void *serialized = calloc(calcPacketSize(packet), sizeof(uint8_t));
     uint8_t *currentByte = serialized;
 
+   // packet ->header ->ackPort = htons(packet ->header ->ackPort);
     // Members of Header listed here will be serialized in order
     memcpy(currentByte, &(packet ->header ->isAck), sizeof(bool));
     currentByte += sizeof(bool);
     memcpy(currentByte, &(packet ->header ->dataLen), sizeof(int));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->msgId), sizeof(int));
+  //  logMsg(D, "serializePacket: serialized msgId %02X%02X%02X%02X\n", *currentByte, *(currentByte + 1), *(currentByte + 2), *(currentByte + 3));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->index), sizeof(int));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->endIndex), sizeof(int));
+    logMsg(D, "serializePacket: serialized endIndex %02X%02X%02X%02X\n", *currentByte, *(currentByte + 1), *(currentByte + 2), *(currentByte + 3));
     currentByte += sizeof(int);
+    memcpy(currentByte, &(packet ->header ->ackPort), sizeof(in_port_t));
+ //   logMsg(D, "serializePacket: serialized port %02X%02X\n", *currentByte, *(currentByte + 1));
+    currentByte += sizeof(in_port_t);
 
     // serializes data
     if (packet ->header ->dataLen != 0){
@@ -92,23 +98,24 @@ Packet *deserializePacket(uint8_t *bytes){
     uint8_t *currentByte = bytes;
 
     // Deserializing members of Header struct
-    deserialized ->header ->isAck = (bool) *currentByte;
+    memcpy(&(deserialized ->header ->isAck), currentByte, sizeof(bool));
     currentByte += sizeof(bool);
-    deserialized ->header ->dataLen = (int) *currentByte;
+    memcpy(&(deserialized ->header ->dataLen), currentByte, sizeof(int));
     currentByte += sizeof(int);
-    deserialized ->header ->msgId = (int) *currentByte;
+    memcpy(&(deserialized ->header ->msgId), currentByte, sizeof(int));
     currentByte += sizeof(int);
-    deserialized ->header ->index = (int) *currentByte;
+    memcpy(&(deserialized ->header ->index), currentByte, sizeof(int));
     currentByte += sizeof(int);
-    deserialized ->header ->endIndex = (int) *currentByte;
+    memcpy(&(deserialized ->header ->endIndex), currentByte, sizeof(int));
     currentByte += sizeof(int);
+    memcpy(&(deserialized ->header ->ackPort), currentByte, sizeof(in_port_t));
+    currentByte += sizeof(in_port_t);
 
     // deserialized data is stored in a dynamically allocated buffer.
     if (deserialized -> header ->dataLen != 0){
         deserialized ->data = calloc(deserialized ->header ->dataLen, sizeof(uint8_t));
         memcpy(deserialized ->data, currentByte, deserialized -> header ->dataLen);
     }
-
 
     return deserialized;
 
