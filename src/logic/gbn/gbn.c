@@ -2,7 +2,6 @@
 #include "gbn/gbn.h"
 #include "gbn/packet.h"
 #include "gbn/launchBattery.h"
-#include "gbn/sendTable.h"
 #include <stdlib.h>
 
 int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *msg, int size, void (*errorHandler)(SendError)){
@@ -12,12 +11,12 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     int numOfPackets = packetize(msg, size, &packets);
 
     // registers the message in the send table
-    SendEntry *sendEntry = newSendEntry();
+    SortingEnty *sendEntry = newSortingEntry();
     sendEntry ->sd = sd;
-    sendEntry ->dest_addr = dest_addr;
+    sendEntry ->addr = dest_addr;
     sendEntry ->addrlen = addrlen;
-    sendEntry ->errorHandler = errorHandler;
-    addToSendTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
+    sendEntry ->errorHandler = (void (*)(int)) errorHandler;
+    addToSortingTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
 
     // adds the packets atomically to the battery
     if (addToLaunchBatteryAtomically(packets, numOfPackets)){
@@ -33,3 +32,5 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     return 0;
 
 }
+
+// TODO: recvMessageGbn

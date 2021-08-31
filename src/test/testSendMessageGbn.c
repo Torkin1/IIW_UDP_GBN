@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-// tested with MTU = 20 and winsize = 10
 // see if packets are sent correctly using wireshark on loopback interface
 
 char *msg = "ciao a tutti!";

@@ -6,68 +6,18 @@
 #include <errno.h>
 #include <string.h>
 
-// send window
-
-#define WINSIZE_DEFAULT 2
-
-static int winsize;
-
 // singleton send window
 static SendWindow *sendWindow;
 static pthread_once_t isSendWindowInitialized = PTHREAD_ONCE_INIT;
 
-SendWindow *newSendWindow(){
+// singleton sorting table
+static SortingTable *sendTable;
+static pthread_once_t isSendTableInitialized = PTHREAD_ONCE_INIT;
 
-    SendWindow *sendWindow = calloc(1, sizeof(SendWindow));
-    pthread_mutex_init(&(sendWindow ->lock), NULL);
-
-    return sendWindow;
-}
-
-void destroySendWindow(SendWindow *self){
-
-    int err;
-
-    if ((err = pthread_mutex_destroy(&(self ->lock)))){
-        logMsg(W, "destroySendWindow: can't destroy lock: %s\n", strerror(err));
-    }
-    free(self);
-
-}
-
-int getWinSize(){
-
-    return winsize;
-
-}
-
-int calcAdaptiveWinSize(){
-
-    // TODO: actually calculate winsize
-    int res = -1;
-
-    return res;
-
-}
-
-int updateAdaptiveWinSize(float rtt){
-
-    int old = getWinSize();
-
-    // TODO:
-
-    return old;
-
-}
 
 void initSendWindow(){
 
     sendWindow = newSendWindow();
-
-    // sets up initial values for sendWindow according to winsize
-    winsize = WINSIZE_DEFAULT;
-    sendWindow ->nextSeqNum = winsize;
-
 }
 
 SendWindow *getSendWindowReference(){
@@ -80,6 +30,24 @@ SendWindow *getSendWindowReference(){
     return sendWindow;
 
 }
+
+void initSendTable(){
+
+    sendTable = newSortingTable();
+
+}
+
+SortingTable *getSendTableReference(){
+
+    if (sendTable == NULL){
+
+        pthread_once(&isSendTableInitialized, initSendTable);
+    }
+
+    return sendTable;
+
+}
+
 
 bool isInWindow(int i){
 

@@ -9,7 +9,6 @@
 #include "gbn/launcher.h"
 #include <errno.h>
 #include <unistd.h>
-#include "gbn/sendTable.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include "gbn/packet.h"
@@ -78,7 +77,7 @@ int fireLaunchPad(LaunchPad *currentPad)
     socklen_t ackAddrLen = sizeof(struct sockaddr_in);
 
     // dest addr can be retrieved in send table
-    SendEntry *currentSendEntry = getFromSendTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
+    SortingEnty *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
 
     // writes in packet port number where the launcher will listen for acks
     if (getsockname(listenAckSocket, &ackAddr, &ackAddrLen)){
@@ -98,7 +97,7 @@ int fireLaunchPad(LaunchPad *currentPad)
     if (!isJammed())
     {
         // sends serialized packet
-        if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->dest_addr, currentSendEntry ->addrlen)) < 0)
+        if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->addr, currentSendEntry ->addrlen)) < 0)
         {
 
             err = errno;
@@ -275,6 +274,7 @@ void listenForAcks()
                     logMsg(D, "listenForAcks: discarded ack out of order\n");
 
                 }
+                // FIXME: acks received from a peer with an address different from the one specified in send entry must be discarded
                 else
                 {
                     logMsg(D, "listenForAcks: accepted ACK with msgId=%d and index=%d\n", ack -> header ->msgId, ackedIndex);
@@ -299,7 +299,7 @@ void listenForAcks()
                     if (ackedIndex == ack -> header ->endIndex)
                     {
                         logMsg(D, "listenForAcks: message %d fully sent\n", ack ->header ->msgId);
-                        removeFromSendTable(getSendTableReference(), ack -> header ->msgId);
+                        removeFromSortingTable(getSendTableReference(), ack -> header ->msgId);
                     }
 
                     // TODO: timeout of oldest packet in window must be reset
