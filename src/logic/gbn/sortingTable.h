@@ -19,6 +19,7 @@ typedef struct sortingEntry{
 typedef struct sortingTable {
 
     HashTable *table;
+    pthread_mutex_t lock;
 
 } SortingTable;
 

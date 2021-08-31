@@ -76,9 +76,6 @@ int fireLaunchPad(LaunchPad *currentPad)
     struct sockaddr_in ackAddr;
     socklen_t ackAddrLen = sizeof(struct sockaddr_in);
 
-    // dest addr can be retrieved in send table
-    SortingEnty *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
-
     // writes in packet port number where the launcher will listen for acks
     if (getsockname(listenAckSocket, &ackAddr, &ackAddrLen)){
         err = errno;
@@ -91,12 +88,15 @@ int fireLaunchPad(LaunchPad *currentPad)
     sendbuf = serializePacket(currentPad ->packet);
     sendbufSize = calcPacketSize(currentPad ->packet);
 
-    // TODO: measure time needed for send to successfully return and update the upload time with that value.
-
+    // dest addr can be retrieved in send table
+    pthread_mutex_lock(&(getSendTableReference() ->lock));
+    SortingEnty *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
+    
     // packet shall be discarded with a probability of p. This is to simulate a loss event
     if (!isJammed())
     {
         // sends serialized packet
+        // TODO: measure time needed for send to successfully return and update the upload time with that value.    
         if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->addr, currentSendEntry ->addrlen)) < 0)
         {
 
@@ -111,6 +111,8 @@ int fireLaunchPad(LaunchPad *currentPad)
 
         logMsg(W, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
     }
+
+    pthread_mutex_unlock(&(getSendTableReference() ->lock));
 
     // updates launch pad stats
     currentPad ->status = SENT;
@@ -299,7 +301,10 @@ void listenForAcks()
                     if (ackedIndex == ack -> header ->endIndex)
                     {
                         logMsg(D, "listenForAcks: message %d fully sent\n", ack ->header ->msgId);
+                        
+                        pthread_mutex_lock(&(getSendTableReference() ->lock));
                         removeFromSortingTable(getSendTableReference(), ack -> header ->msgId);
+                        pthread_mutex_unlock(&(getSendTableReference() ->lock));
                     }
 
                     // TODO: timeout of oldest packet in window must be reset

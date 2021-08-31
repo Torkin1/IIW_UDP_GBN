@@ -16,7 +16,10 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     sendEntry ->addr = dest_addr;
     sendEntry ->addrlen = addrlen;
     sendEntry ->errorHandler = (void (*)(int)) errorHandler;
+
+    pthread_mutex_lock(&(getSendTableReference() ->lock));
     addToSortingTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
+    pthread_mutex_unlock(&(getSendTableReference() ->lock));
 
     // adds the packets atomically to the battery
     if (addToLaunchBatteryAtomically(packets, numOfPackets)){
