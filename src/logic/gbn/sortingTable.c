@@ -15,9 +15,9 @@ SortingTable *newSortingTable(){
 
 }
 
-SortingEnty *newSortingEntry(){
+SortingEntry *newSortingEntry(){
 
-    return calloc(1, sizeof(SortingEnty));
+    return calloc(1, sizeof(SortingEntry));
 
 }
 
@@ -29,7 +29,7 @@ void destroySortingTable(SortingTable *self){
 
 }
 
-void destroySortingEntry(SortingEnty *self){
+void destroySortingEntry(SortingEntry *self){
 
     free(self);
 
@@ -44,7 +44,7 @@ int craftKeyFromMsgId(int msgId, int **keyAddr){
 
 }
 
-void addToSortingTable(SortingTable *self, int msgId, SortingEnty *entry){
+void addToSortingTable(SortingTable *self, int msgId, SortingEntry *entry){
 
     int *key;
     int keySize = craftKeyFromMsgId(msgId, &key);
@@ -52,12 +52,12 @@ void addToSortingTable(SortingTable *self, int msgId, SortingEnty *entry){
 
 }
 
-SortingEnty *getFromSortingTable(SortingTable *self, int msgId){
+SortingEntry *getFromSortingTable(SortingTable *self, int msgId){
 
 
     int *key;
     int keySize = craftKeyFromMsgId(msgId, &key);
-    SortingEnty *entry = (SortingEnty *) getValueFromHashTable(self ->table, key, keySize);
+    SortingEntry *entry = (SortingEntry *) getValueFromHashTable(self ->table, key, keySize);
     free(key);
     return entry;
 

@@ -14,7 +14,7 @@
 
 // see if packets are sent correctly using wireshark on loopback interface
 
-char *msg = "ciao a tutti!";
+static char *msg = "ciao a tutti!";
 static int lastIndexReceived = -1;
 
 void testSendMessageGbn(){
@@ -25,14 +25,15 @@ void testSendMessageGbn(){
     sendAddr ->sin_port = htons(32772);
     sendAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
-
     int receiveSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     struct sockaddr_in *recvAddr = calloc(1, sizeof(struct sockaddr_in));
     recvAddr ->sin_family = AF_INET;
     recvAddr ->sin_port = htons(32772);
     recvAddr ->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     bind(receiveSocket, (struct sockaddr*) recvAddr, sizeof(struct sockaddr_in));
+
+    sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
+
 
     int sendAckSocket = -1;
     struct sockaddr_in *ackAddr;

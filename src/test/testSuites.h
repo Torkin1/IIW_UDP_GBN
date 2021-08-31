@@ -17,5 +17,6 @@ void assertEquals(const void* expected, const void* actual, size_t size, char *e
 
 void testSerialize();
 void testSendMessageGbn();
+void testSendMessageGbnMultipleSends();
 
 #endif // TESTSUITES_H_INCLUDED

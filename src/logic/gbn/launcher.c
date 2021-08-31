@@ -90,7 +90,7 @@ int fireLaunchPad(LaunchPad *currentPad)
 
     // dest addr can be retrieved in send table
     pthread_mutex_lock(&(getSendTableReference() ->lock));
-    SortingEnty *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
+    SortingEntry *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
     
     // packet shall be discarded with a probability of p. This is to simulate a loss event
     if (!isJammed())
@@ -127,10 +127,8 @@ int fireLaunchPad(LaunchPad *currentPad)
 int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
 {
 
-    // locks battery
     LaunchBattery *battery = getLaunchBatteryReference();
 
-    // locks window and stores current values
     int base, nextSeqNum;
     SendWindow *window = getSendWindowReference();
 
@@ -228,7 +226,7 @@ void listenForAcks()
     void *buf = calloc(1, calcAckSize());
     struct sockaddr_in fromWho;
     socklen_t fromWhoLen = sizeof(struct sockaddr_in);
-    int recvfromRes, base, ackedIndex, newBase;
+    int recvfromRes, base, ackedIndex, newBase, newNextSeqNum;
     Packet *ack;
     LaunchPad *currentPad;
 
@@ -297,22 +295,29 @@ void listenForAcks()
                     }
                     lastIndexAcked = ackedIndex;
 
-                    // if it's the last packet of the message we remove the corresponding entry from the send table
+                    // if it's the last packet of the message we do some cleanup 
                     if (ackedIndex == ack -> header ->endIndex)
                     {
                         logMsg(D, "listenForAcks: message %d fully sent\n", ack ->header ->msgId);
                         
+                        // remove the corresponding entry from the send table
                         pthread_mutex_lock(&(getSendTableReference() ->lock));
                         removeFromSortingTable(getSendTableReference(), ack -> header ->msgId);
                         pthread_mutex_unlock(&(getSendTableReference() ->lock));
+
+                        // resets send state
+                        lastIndexAcked = -1;
                     }
 
                     // TODO: timeout of oldest packet in window must be reset
 
                     // updates send window
                     newBase = (ackedIndex + 1) % QUEUE_LEN;
+                    newNextSeqNum = (newBase + getWinSize()) % QUEUE_LEN;
+                    
+                    logMsg(D, "listenForAcks: updating send window base: %d -> %d, nextSeqNum: %d -> %d\n", getSendWindowReference() ->base, newBase, getSendWindowReference() ->nextSeqNum, newNextSeqNum);
                     getSendWindowReference() ->base = newBase;
-                    getSendWindowReference() ->nextSeqNum = (newBase + getWinSize()) % QUEUE_LEN;
+                    getSendWindowReference() ->nextSeqNum = newNextSeqNum;
 
                     // send window could now contain packets to send;
                     sendAllReadyPacketsInWindow();

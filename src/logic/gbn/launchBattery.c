@@ -73,7 +73,7 @@ bool isInWindow(int i){
         isInWindow = (i >= currentBase && i < currentNextSeqNum);
     }
     else {
-        isInWindow = (i >= currentBase && i < QUEUE_LEN) && (i >= 0 && i < currentNextSeqNum);
+        isInWindow = (i >= currentBase && i < QUEUE_LEN) || (i >= 0 && i < currentNextSeqNum);
     }
 
     return isInWindow;
@@ -207,9 +207,13 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
 
     // adds the packets to the queue.
     int start = getLaunchBatteryReference() ->nextAvailableIndex;
+    int atIndex, atEndIndex, atNextAvailableIndex;;
     for (int i = 0; i < n; i ++){
 
-        LaunchPad *currentLaunchPad = getLaunchBatteryReference() ->battery[(start + i) % QUEUE_LEN];
+        atIndex = (start + i) % QUEUE_LEN;
+        atEndIndex = (start + n - 1) % QUEUE_LEN;
+        atNextAvailableIndex = (start + n) % QUEUE_LEN;
+        LaunchPad *currentLaunchPad = getLaunchBatteryReference() ->battery[atIndex];
         if (isLaunchPadAvailable(currentLaunchPad)){
 
             // Launch pads containing ACKED or LOST packets are cleared before use
@@ -217,19 +221,21 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
 
                 resetLaunchPad(currentLaunchPad);
             }
-            packets[i] ->header ->index = start + i;
-            packets[i] ->header ->endIndex = start + n - 1;
+            packets[i] ->header ->index = atIndex;
+            packets[i] ->header ->endIndex = atEndIndex;
             currentLaunchPad ->packet = packets[i];
             currentLaunchPad ->status = READY;
             updateContiguousPads(-1);
         }
     }
-    getLaunchBatteryReference() ->nextAvailableIndex = (start + n) % QUEUE_LEN;
+    getLaunchBatteryReference() ->nextAvailableIndex = atNextAvailableIndex;
 
     if ((err = pthread_mutex_unlock(&(getLaunchBatteryReference() ->lock)))){
         logMsg(E, "addToLaunchBattery: unable to unlock battery: %s\n", strerror(err));
         return -1;
     }
+
+    logMsg(D, "packets added at index %d\n", start);
 
     // notifies launcher thread if new packets are in the send window
     if ((err = pthread_mutex_lock(&(getSendWindowReference() ->lock)))){
@@ -237,6 +243,7 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
         return -1;
     }
 
+    logMsg(D, "isInWindow returns %d\n", isInWindow(start));
     if (isInWindow(start)){
         if (notifyLauncher(NEW_PACKETS_IN_SEND_WINDOW)){
             logMsg(E, "addToLaunchBattery: couldn't notify the launcher\n");

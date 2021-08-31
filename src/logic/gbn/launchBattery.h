@@ -8,7 +8,7 @@
 #include "gbn/sortingTable.h"
 
 // max num of packets that can occupy the queue
-#define QUEUE_LEN 100   // must be much greater than sendWindow
+#define QUEUE_LEN 15//100   // must be much greater than sendWindow
 
 // Each launch pad can only be in one of the following statuses
 typedef enum launchPadStatus{

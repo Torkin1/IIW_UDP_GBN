@@ -13,7 +13,7 @@ typedef struct sortingEntry{
     socklen_t addrlen;                              // address length
     void (*errorHandler)(int errValue);             // function called on a new thread if the send or receive of a message failed
 
-} SortingEnty;
+} SortingEntry;
 
 // this sorting table tracks useful informations corresponding to a message
 typedef struct sortingTable {
@@ -23,14 +23,14 @@ typedef struct sortingTable {
 
 } SortingTable;
 
-SortingEnty *newSortingEntry();
-void destroySortingEntry(SortingEnty *self);
+SortingEntry *newSortingEntry();
+void destroySortingEntry(SortingEntry *self);
 
 SortingTable *newSortingTable();
 void destroySortingTable(SortingTable *self);
 
-void addToSortingTable(SortingTable *self, int msgId, SortingEnty *entry);
-SortingEnty *getFromSortingTable(SortingTable *self, int msgId);
+void addToSortingTable(SortingTable *self, int msgId, SortingEntry *entry);
+SortingEntry *getFromSortingTable(SortingTable *self, int msgId);
 void removeFromSortingTable(SortingTable *self, int msgId);
 
 #endif // SORTINGTABLE_H_INCLUDED

@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Max packet len shall be MTU - sizeof(headers) in order to avoid fragmentation
-const int MAX_PACKET_DATA_LEN;
-
 // Tracks id used for messages
 static int LAST_MSG_ID;
 
@@ -48,8 +45,9 @@ int calcPacketSize(Packet *p){
 
 }
 
-int calcMaxPacketDataLen(){
-
+int calcMaxDataLen(){
+    
+    // Max packet len shall be MTU - sizeof(headers) in order to avoid fragmentation
     return MTU - calcHeaderSize();
 
 }
@@ -133,9 +131,9 @@ int generateMsgId(){
 // divides a message in a group of packets
 int packetize(void *msg, int size, Packet ***packetsAddr){
 
-    logMsg(D, "packetize: max data len is %d\n", calcMaxPacketDataLen());
-    int numOfFullPackets = size / calcMaxPacketDataLen();
-    int remain = size % calcMaxPacketDataLen();
+    logMsg(D, "packetize: max data len is %d\n", calcMaxDataLen());
+    int numOfFullPackets = size / calcMaxDataLen();
+    int remain = size % calcMaxDataLen();
     bool hasRemain = (remain != 0)? true : false;
     int numOfPackets = numOfFullPackets + (int) hasRemain;
 
@@ -146,7 +144,7 @@ int packetize(void *msg, int size, Packet ***packetsAddr){
 
     // Prepares packets and stores them in an array
     int i, j;
-    int howMany = calcMaxPacketDataLen();
+    int howMany = calcMaxDataLen();
     uint8_t *buf, *currentByte = msg;
     for (i = 0, j = 0; i < numOfPackets; i ++, j += howMany){
 
