@@ -51,10 +51,10 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
 
                 // check that packet is in order
                 rcvdSeqNum = packet ->header ->index;
-                if (expectedSeqNum == -1 || rcvdSeqNum == expectedSeqNum){
+                if ((expectedSeqNum == -1 && packet ->header ->isFirst) || rcvdSeqNum == expectedSeqNum){
                     
                     // Check if this is the first packet.
-                    if (expectedSeqNum == -1){
+                    if (expectedSeqNum == -1 && packet ->header ->isFirst){
 
                         logMsg(D, "starting reception of message %d from %s %d\n", packet ->header ->msgId, inet_ntoa(senderAddrBuf.sin_addr), ntohs(senderAddrBuf.sin_port));
 
@@ -100,10 +100,13 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     // checks if there are more packets to wait                    
                     more = !(packet ->header ->index == packet ->header ->endIndex);
 
-                    // TODO: (re)starts timeout of last packet received. If timeout, we silently discard the entire message and return an error
+                    // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
 
                     destroyPacket(packet);
 
+                }
+                else {
+                    logMsg(D, "discarded packet %d out of order\n", packet ->header ->index);
                 }
             }
         }

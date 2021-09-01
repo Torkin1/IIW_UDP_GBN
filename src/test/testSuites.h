@@ -26,5 +26,6 @@ void testSerialize();
 void testSendMessageGbn();
 void testSendMessageGbnMultipleSends();
 void testRecvMessageGbn();
+void testRecvMessageGbnFirstPacketOutOfOrder();
 
 #endif // TESTSUITES_H_INCLUDED

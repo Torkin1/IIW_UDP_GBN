@@ -75,7 +75,7 @@ int main(){
     // test2();
     // ...
 
-    testRecvMessageGbn();
+    testRecvMessageGbnFirstPacketOutOfOrder();
 
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 

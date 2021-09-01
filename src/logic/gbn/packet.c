@@ -35,7 +35,7 @@ void destroyPacket(Packet *self){
 // this function must be updated every time the struct Header changes
 int calcHeaderSize(){
 
-    return sizeof(bool) + (4 * sizeof(int)) + sizeof(in_port_t);
+    return 2 * sizeof(bool) + (4 * sizeof(int)) + sizeof(in_port_t);
 
 }
 
@@ -66,6 +66,8 @@ uint8_t *serializePacket(Packet *packet){
     // Members of Header listed here will be serialized in order
     memcpy(currentByte, &(packet ->header ->isAck), sizeof(bool));
     currentByte += sizeof(bool);
+    memcpy(currentByte, &(packet ->header ->isFirst), sizeof(bool));
+    currentByte += sizeof(bool);
     memcpy(currentByte, &(packet ->header ->dataLen), sizeof(int));
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->msgId), sizeof(int));
@@ -93,6 +95,8 @@ Packet *deserializePacket(uint8_t *bytes){
 
     // Deserializing members of Header struct
     memcpy(&(deserialized ->header ->isAck), currentByte, sizeof(bool));
+    currentByte += sizeof(bool);
+    memcpy(&(deserialized ->header ->isFirst), currentByte, sizeof(bool));
     currentByte += sizeof(bool);
     memcpy(&(deserialized ->header ->dataLen), currentByte, sizeof(int));
     currentByte += sizeof(int);
@@ -152,6 +156,9 @@ int packetize(void *msg, int size, Packet ***packetsAddr){
         if (i >= numOfFullPackets)
             howMany = remain;
         packets[i] = newPacket();
+        if (i == 0){
+            packets[i] ->header ->isFirst = true;
+        }
         packets[i] ->header ->msgId = id;
         packets[i] ->header ->dataLen = howMany;
 
