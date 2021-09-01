@@ -223,6 +223,7 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
             }
             packets[i] ->header ->index = atIndex;
             packets[i] ->header ->endIndex = atEndIndex;
+            packets[i] ->header ->queueLen = QUEUE_LEN;
             currentLaunchPad ->packet = packets[i];
             currentLaunchPad ->status = READY;
             updateContiguousPads(-1);

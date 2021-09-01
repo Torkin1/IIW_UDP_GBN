@@ -57,7 +57,7 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     if (expectedSeqNum == -1 && packet ->header ->isFirst){
 
                         logMsg(D, "starting reception of message %d from %s %d\n", packet ->header ->msgId, inet_ntoa(senderAddrBuf.sin_addr), ntohs(senderAddrBuf.sin_port));
-
+                        
                         // We connect to remote sender so that we receive only its packets
                         connect(sd, (struct sockaddr *) &senderAddrBuf, senderAddrlenBuf);
 
@@ -68,7 +68,7 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
 
                     }
 
-                    expectedSeqNum = rcvdSeqNum + 1;
+                    expectedSeqNum = (rcvdSeqNum + 1) % packet ->header ->queueLen;
                     
                     // we let sender know that we received the packet by sending an ack to the port specified in packet
                     ack = newPacket();
@@ -99,6 +99,9 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     
                     // checks if there are more packets to wait                    
                     more = !(packet ->header ->index == packet ->header ->endIndex);
+                    if(!more){
+                        logMsg(D, "listenForData: message %d from %s:%d has been fully received\n", packet ->header ->msgId, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+                    }
 
                     // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
 
@@ -112,7 +115,6 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
         }
     }
 
-    logMsg(D, "listenForData: message has been fully received\n");
     
     // deliver sender data to caller
     if (senderAddr != NULL){

@@ -35,7 +35,7 @@ void destroyPacket(Packet *self){
 // this function must be updated every time the struct Header changes
 int calcHeaderSize(){
 
-    return 2 * sizeof(bool) + (4 * sizeof(int)) + sizeof(in_port_t);
+    return 2 * sizeof(bool) + (5 * sizeof(int)) + sizeof(in_port_t);
 
 }
 
@@ -76,6 +76,8 @@ uint8_t *serializePacket(Packet *packet){
     currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->endIndex), sizeof(int));
     currentByte += sizeof(int);
+    memcpy(currentByte, &(packet ->header ->queueLen), sizeof(int));
+    currentByte += sizeof(int);
     memcpy(currentByte, &(packet ->header ->ackPort), sizeof(in_port_t));
     currentByte += sizeof(in_port_t);
 
@@ -105,6 +107,8 @@ Packet *deserializePacket(uint8_t *bytes){
     memcpy(&(deserialized ->header ->index), currentByte, sizeof(int));
     currentByte += sizeof(int);
     memcpy(&(deserialized ->header ->endIndex), currentByte, sizeof(int));
+    currentByte += sizeof(int);
+    memcpy(&(deserialized ->header ->queueLen), currentByte, sizeof(int));
     currentByte += sizeof(int);
     memcpy(&(deserialized ->header ->ackPort), currentByte, sizeof(in_port_t));
     currentByte += sizeof(in_port_t);
