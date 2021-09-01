@@ -7,8 +7,8 @@
 #include "gbn/window.h"
 #include "gbn/sortingTable.h"
 
-// max num of packets that can occupy the queue
-#define QUEUE_LEN 15//100   // must be much greater than sendWindow
+// max num of packets that can occupy the queue. must be much greater than sendWindo
+#define QUEUE_LEN 15//100   
 
 // Each launch pad can only be in one of the following statuses
 typedef enum launchPadStatus{
@@ -22,7 +22,6 @@ typedef enum launchPadStatus{
 
 } LaunchPadStatus;
 
-// Send queue can be imagined as a launch battery, where each seat is a launch pad.
 // Every seat in the launch battery is a launch pad, which can hold a packet and tracks its status
 typedef struct launchPad{
 
@@ -32,15 +31,17 @@ typedef struct launchPad{
 
 } LaunchPad;
 
-// this is intended to be singleton
+// Send queue can be imagined as a launch battery, where each seat is a launch pad.
 typedef struct launchBattery{
 
     LaunchPad *battery[QUEUE_LEN];          // the actual queue
-    int contiguousPadsAvailable;            /*
+    
+                                            /*
                                                 tracks number of contiguous pads available.
                                                 This redundancy is useful because it kills the need to check every pad to know if there is enough space to add more packets.
                                                 Must be updated whenever new packets are added or packets in battery are ACKED or LOST
                                             */
+    int contiguousPadsAvailable;            
     pthread_mutex_t lock;                   // lock on the battery
     int nextAvailableIndex;                 // index next to the last pad occupied
 
@@ -69,6 +70,5 @@ bool isInWindow(int i);
 
 // stores send table reference
 SortingTable *getSendTableReference();
-
 
 #endif // LAUNCHBATTERY_H_INCLUDED

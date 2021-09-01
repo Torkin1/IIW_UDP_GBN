@@ -9,9 +9,6 @@
 #include "testSuites.h"
 #include "logger/logger.h"
 
-#define SIGASSFLD SIGUSR1
-#define EXIT_ON_FAIL true
-
 typedef struct assertionFailureInfo{
 
     char *msg;
@@ -78,8 +75,7 @@ int main(){
     // test2();
     // ...
 
-    //testSendMessageGbn();
-    testSendMessageGbnMultipleSends();
+    testRecvMessageGbn();
 
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 

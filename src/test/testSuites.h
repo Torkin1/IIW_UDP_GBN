@@ -3,10 +3,17 @@
 
 #include <stdlib.h>
 
-// Compares byte-to-byte expected and actual value. If they are not equal, a signal is raised
-// size parameter shall be the size of expected value
-// errorMsg will be used by handler to inform that the test failed
-// cleanup function will be called after handling the failure, so use it if the test function has to do some cleanup
+#define EXIT_ON_FAIL true
+#define SIGASSFLD SIGUSR1
+
+/*
+Compares byte-to-byte expected and actual value. If they are not equal, SIGASSFLD is raised and process could exit depending on EXIT_ON_FAIL value
+@param expected pointer to expected value
+@param actual pointer to actual value
+@param size size of expected value
+@param errorMsg error string message printed if assertion failed
+@param cleanup function called after test failed and executed by signal handler. This ensures that cleanup actions are still performed if signal handler decides to exit process at assertion failure
+*/
 void assertEquals(const void* expected, const void* actual, size_t size, char *errorMsg, void (*cleanup)(void));
 
 // test functions written below can be called by the test launcher
@@ -18,5 +25,6 @@ void assertEquals(const void* expected, const void* actual, size_t size, char *e
 void testSerialize();
 void testSendMessageGbn();
 void testSendMessageGbnMultipleSends();
+void testRecvMessageGbn();
 
 #endif // TESTSUITES_H_INCLUDED

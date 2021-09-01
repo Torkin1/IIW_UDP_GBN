@@ -1,8 +1,12 @@
+#define _DEFAULT_SOURCE
 #include "logger/logger.h"
 #include "gbn/gbn.h"
 #include "gbn/packet.h"
 #include "gbn/launchBattery.h"
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include "gbn/catcher.h"
 
 int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *msg, int size, void (*errorHandler)(SendError)){
 
@@ -11,7 +15,7 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     int numOfPackets = packetize(msg, size, &packets);
 
     // registers the message in the send table
-    SortingEnty *sendEntry = newSortingEntry();
+    SortingEntry *sendEntry = newSortingEntry();
     sendEntry ->sd = sd;
     sendEntry ->addr = dest_addr;
     sendEntry ->addrlen = addrlen;
@@ -36,4 +40,12 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
 
 }
 
-// TODO: recvMessageGbn
+/*  Returns when a data message is available.
+    Pointer to dynamically allocated message will be stored in *msg and its size in *size.
+    Sender addr and its size will be stored in *sender_addr and *addrlen;
+    Socket must be already bound to an addr before passing it to this function.
+*/ 
+int recvMessageGbn(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen, void **msgBuf, int *size){
+
+    return listenForData(sd, senderAddr, senderAddrlen, msgBuf, size);
+}
