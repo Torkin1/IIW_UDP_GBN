@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include "gbn/jammer.h"
+#include "gbn/timer.h"
 
 // launcher control thread data
 static pthread_t launcherId;
@@ -31,8 +32,16 @@ static bool isOldActSet = false;
 // socket ack listener
 static int listenAckSocket = -1;
 
-// index in the battery of the last packed acked
-static int lastIndexAcked = -1;
+// singleton timer for oldest packet in window on air
+static Timer *timer;
+
+Timer *getTimerReference(){
+
+    if (timer == NULL){
+        timer = newTimer();
+    }
+    return timer;
+}
 
 // gets the real time signal value corresponding to the provided launcher event
 int getLauncherSignal(LauncherEvent event)
@@ -64,6 +73,14 @@ void launcherCleanup()
         }
     }
 
+    // destroys timer for oldest packet in window
+    if (getTimerReference() ->isAlive){
+        timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);
+        pthread_join(getTimerReference() ->timerTid, NULL);
+    }  
+    destroyTimer(getTimerReference());
+    
+    // closes ack listen socket
     close(listenAckSocket);
 
 }
@@ -109,7 +126,7 @@ int fireLaunchPad(LaunchPad *currentPad)
 
     } else {
 
-        logMsg(W, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
+        logMsg(D, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
     }
 
     pthread_mutex_unlock(&(getSendTableReference() ->lock));
@@ -142,6 +159,7 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
     {
         nextSeqNum += QUEUE_LEN;
     }
+    int launches = 0;
     for (int i = base; i < nextSeqNum; i ++)
     {
         currentPad = (battery -> battery)[i % QUEUE_LEN];
@@ -149,13 +167,15 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
         {
             if (currentPad -> status == statuses[j])
             {
-                fireLaunchPad(currentPad);
+                if (fireLaunchPad(currentPad) >= 0){
+                    launches ++;
+                }
                 break;
             }
         }
     }
 
-    return 0;
+    return launches;
 
 }
 
@@ -178,13 +198,27 @@ int sendAllReadyPacketsInWindow()
 
 }
 
+int sendAllSentPacketsInWindow(){
+
+    LaunchPadStatus status = SENT;
+    return sendAllPacketsInWindowCore(&status, 1);
+}
+
+void ring(){
+
+    notifyLauncher(LAUNCHER_EVENT_PACKET_TIMED_OUT);
+}
+
+// handles launcher events
 void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
 {
 
+    logMsg(D, "launcherSigHandler: captured signal %d\n", sig);
+    
     // can't use a switch because real time signal value are determined at run time
-    if (sig == getLauncherSignal(NEW_PACKETS_IN_SEND_WINDOW))
+    if (sig == getLauncherSignal(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW))
     {
-
+        int launches;
         LaunchBattery *battery = getLaunchBatteryReference();
         SendWindow *window = getSendWindowReference();
 
@@ -192,22 +226,56 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         pthread_mutex_lock(&(battery ->lock));
         pthread_mutex_lock(&(window ->lock));
 
-        sendAllReadyPacketsInWindow();
+        launches = sendAllReadyPacketsInWindow();
 
         pthread_mutex_unlock(&(window ->lock));
         pthread_mutex_unlock(&(battery ->lock));
 
         logMsg(D, "launcherSigHandler: all ready packets in window sent\n");
 
-        // TODO: sets timeout for the oldest packet in window
+        // (re)starts timeout for the oldest packet in window if not already started
+        
+        if (launches > 0){
+            if (!(getTimerReference()->isAlive))
+            {
+                startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
+            }
+            else
+            {
+                timeout(getTimerReference(), AT_TIMEOUT_RESTART);
+            }
+        }
+
     }
-    else if (sig == getLauncherSignal(PACKET_TIMED_OUT))
+    else if (sig == getLauncherSignal(LAUNCHER_EVENT_PACKET_TIMED_OUT))
     {
+        int launches = 0;
+        LaunchBattery *battery = getLaunchBatteryReference();
+        SendWindow *window = getSendWindowReference();
+        
+        // sends all sent packets in send window
+        pthread_mutex_lock(&(battery ->lock));
+        pthread_mutex_lock(&(window ->lock));
 
-        // TODO:
+        launches = sendAllSentPacketsInWindow();
+        logMsg(D, "launcherSigHandler: all sent packets in window sent\n");
+
+        pthread_mutex_unlock(&(window ->lock));
+        pthread_mutex_unlock(&(battery ->lock));
+
+        // restarts timer
+        if (launches > 0){
+            if (getTimerReference()->isAlive)
+            {
+                while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
+            }
+            startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
+        }
+       
+        
     }
 
-    else if (sig == getLauncherSignal(SHUTDOWN))
+    else if (sig == getLauncherSignal(LAUNCHER_EVENT_SHUTDOWN))
     {
 
         isLauncherAvailable = false;
@@ -226,12 +294,12 @@ void listenForAcks()
     void *buf = calloc(1, calcAckSize());
     struct sockaddr_in fromWho;
     socklen_t fromWhoLen = sizeof(struct sockaddr_in);
-    int recvfromRes, base, ackedIndex, newBase, newNextSeqNum;
+    int recvfromRes, base, ackIndex, newBase, newNextSeqNum, ackedPacks;
     Packet *ack;
     LaunchPad *currentPad;
 
     // launcher listens for acks for all its life
-    while(isLauncherAvailable)
+    while (isLauncherAvailable)
     {
 
         if (recvfrom(listenAckSocket, buf, calcAckSize(), 0, &fromWho, &fromWhoLen) < 0)
@@ -249,9 +317,7 @@ void listenForAcks()
             {
 
                 logMsg(E, "listenForAcks: an error occcurred while listening for acks: %s\n", strerror(errno));
-
             }
-
         }
 
         else
@@ -259,80 +325,76 @@ void listenForAcks()
 
             // a packet has been received, but there is no guarantee that it is an ACK
             ack = deserializePacket(buf);
-            if (ack ->header ->isAck)
+            if (ack->header->isAck)
             {
 
-                pthread_mutex_lock(&(getSendWindowReference() ->lock));
+                pthread_mutex_lock(&(getSendWindowReference()->lock));
 
-                base = getSendWindowReference() ->base;
+                base = getSendWindowReference()->base;
 
                 // acks referred to already acked packets are discarded
-                ackedIndex = ack ->header ->index;
-                bool isIndexOutOfOrder = (ackedIndex <= lastIndexAcked) && ((lastIndexAcked - ackedIndex) <= getWinSize());
-                if (isIndexOutOfOrder)
-                {
-                    logMsg(D, "listenForAcks: discarded ack out of order\n");
+                ackIndex = ack->header->index;
+                logMsg(D, "listenForAcks: accepted ACK with msgId=%d and index=%d\n", ack->header->msgId, ackIndex);
 
+                // all packets up to the specified index are ACKED
+                pthread_mutex_lock(&(getLaunchBatteryReference()->lock));
+
+                if (ackIndex < base)
+                {
+                    ackIndex += QUEUE_LEN;
                 }
-                // FIXME: acks received from a peer with an address different from the one specified in send entry must be discarded
-                else
+                ackedPacks = 0;
+                for (int i = base; i < ackIndex; i++)
                 {
-                    logMsg(D, "listenForAcks: accepted ACK with msgId=%d and index=%d\n", ack -> header ->msgId, ackedIndex);
-
-                    // all packets up to the specified index are ACKED
-                    pthread_mutex_lock(&(getLaunchBatteryReference() ->lock));
-
-                    if (ackedIndex < base)
+                    currentPad = getLaunchBatteryReference()->battery[i % QUEUE_LEN];
+                    if (currentPad->status != ACKED)
                     {
-                        ackedIndex += QUEUE_LEN;
-                    }
-                    for (int i = base; i <= ackedIndex; i ++)
-                    {
-                        currentPad = getLaunchBatteryReference() ->battery[i % QUEUE_LEN];
-                        currentPad ->status = ACKED;
+                        currentPad->status = ACKED;
                         updateContiguousPads(1);
-
+                        ackedPacks++;
                     }
-                    lastIndexAcked = ackedIndex;
+                }
 
-                    // if it's the last packet of the message we do some cleanup 
-                    if (ackedIndex == ack -> header ->endIndex)
+                // If ACK was in order at least one packet has been acked
+                if (ackedPacks > 0)
+                {
+                    // if it's the last packet of the message we do some cleanup
+                    if (ackIndex == ((ack->header->endIndex) + 1) % QUEUE_LEN)
                     {
-                        logMsg(D, "listenForAcks: message %d fully sent\n", ack ->header ->msgId);
-                        
-                        // remove the corresponding entry from the send table
-                        pthread_mutex_lock(&(getSendTableReference() ->lock));
-                        removeFromSortingTable(getSendTableReference(), ack -> header ->msgId);
-                        pthread_mutex_unlock(&(getSendTableReference() ->lock));
+                        logMsg(D, "listenForAcks: message %d fully sent\n", ack->header->msgId);
 
-                        // resets send state
-                        lastIndexAcked = -1;
+                        // remove the corresponding entry from the send table
+                        pthread_mutex_lock(&(getSendTableReference()->lock));
+                        removeFromSortingTable(getSendTableReference(), ack->header->msgId);
+                        pthread_mutex_unlock(&(getSendTableReference()->lock));
                     }
 
-                    // TODO: timeout of oldest packet in window must be reset
+                    // timeout of oldest packet in window must be stopped
+                    if (getTimerReference()->isAlive)
+                    {
+                        timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);
+                        while (pthread_join(getTimerReference()->timerTid, NULL) < 0)
+                            ;
+                    }
 
                     // updates send window
-                    newBase = (ackedIndex + 1) % QUEUE_LEN;
+                    newBase = ackIndex % QUEUE_LEN;
                     newNextSeqNum = (newBase + getWinSize()) % QUEUE_LEN;
-                    
-                    logMsg(D, "listenForAcks: updating send window base: %d -> %d, nextSeqNum: %d -> %d\n", getSendWindowReference() ->base, newBase, getSendWindowReference() ->nextSeqNum, newNextSeqNum);
-                    getSendWindowReference() ->base = newBase;
-                    getSendWindowReference() ->nextSeqNum = newNextSeqNum;
-
-                    // send window could now contain packets to send;
-                    sendAllReadyPacketsInWindow();
-
-                    pthread_mutex_unlock(&(getLaunchBatteryReference() ->lock));
+                    getSendWindowReference()->base = newBase;
+                    getSendWindowReference()->nextSeqNum = newNextSeqNum;
+                    logMsg(D, "listenForAcks: updated send window base: %d, nextSeqNum: %d\n", getSendWindowReference()->base, getSendWindowReference()->nextSeqNum);
                 }
 
-                destroyPacket(ack);
-                pthread_mutex_unlock(&(getSendWindowReference() ->lock));
+                pthread_mutex_unlock(&(getLaunchBatteryReference()->lock));
+                pthread_mutex_unlock(&(getSendWindowReference()->lock));
 
+                // send window could now contain packets to send;
+                notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
+
+                destroyPacket(ack);
             }
         }
-
     }
-
 }
 
 // launcher routine
@@ -342,10 +404,6 @@ void *launcher(void *args)
     logMsg(D, "launcher: launcher is alive\n");
 
     pthread_mutex_lock(&launcherInitializerLock);
-
-    // no need to join this thread
-    pthread_detach(pthread_self());
-
 
     // sets up listen socket for acks
     listenAckSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

@@ -27,5 +27,6 @@ void testSendMessageGbn();
 void testSendMessageGbnMultipleSends();
 void testRecvMessageGbn();
 void testRecvMessageGbnFirstPacketOutOfOrder();
+void testTimerConst();
 
 #endif // TESTSUITES_H_INCLUDED

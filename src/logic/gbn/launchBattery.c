@@ -236,7 +236,7 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
         return -1;
     }
 
-    logMsg(D, "packets added at index %d\n", start);
+    logMsg(D, "addToLaunchBattery: packets added at index %d\n", start);
 
     // notifies launcher thread if new packets are in the send window
     if ((err = pthread_mutex_lock(&(getSendWindowReference() ->lock)))){
@@ -244,13 +244,12 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
         return -1;
     }
 
-    logMsg(D, "isInWindow returns %d\n", isInWindow(start));
     if (isInWindow(start)){
-        if (notifyLauncher(NEW_PACKETS_IN_SEND_WINDOW)){
+        if (notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW)){
             logMsg(E, "addToLaunchBattery: couldn't notify the launcher\n");
             return -1;
         }
-        logMsg(D, "addToLaunchBattery: launcher notified about event %d\n", NEW_PACKETS_IN_SEND_WINDOW);
+        logMsg(D, "addToLaunchBattery: launcher notified about event %d\n", LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
     }
 
     if ((err = pthread_mutex_unlock(&(getSendWindowReference() ->lock)))){

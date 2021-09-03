@@ -8,9 +8,9 @@
 // Launcher must respond to all events listed below
 typedef enum launcherEvent{
 
-    NEW_PACKETS_IN_SEND_WINDOW,         // Some new packets have been added to the battery
-    PACKET_TIMED_OUT,                   // A sent packet timeout expired
-    SHUTDOWN,                           // Launcher must be turned off
+    LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW,         // Some new packets have been added to the battery
+    LAUNCHER_EVENT_PACKET_TIMED_OUT,                   // A sent packet timeout expired
+    LAUNCHER_EVENT_SHUTDOWN,                           // Launcher must be turned off
 
     NUM_OF_LAUNCHER_EVENTS
 
@@ -19,7 +19,7 @@ typedef enum launcherEvent{
 // singleton launcher
 int getLauncherId(pthread_t *tid);
 
-// notifies launcher about an event in the launchBattery.
+// notifies launcher about an event.
 int notifyLauncher(LauncherEvent event);
 
 // turns off launcher and does cleanup

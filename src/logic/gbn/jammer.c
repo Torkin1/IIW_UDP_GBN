@@ -1,9 +1,12 @@
 #include "gbn/jammer.h"
 #include "logger/logger.h"
+#include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#define JAM_RATE 0
+#define JAM_RATE 50
+
+static bool isSeeded = false;
 
 bool isJammed(){
 
@@ -15,6 +18,11 @@ bool isJammed(){
                 since true randomness is not a priority.
     */
 
+    if (!isSeeded){
+        srand(time(NULL));
+        isSeeded = true;
+    }
+    
     int r = rand() % 100;
     bool res = r < JAM_RATE;
     return res;

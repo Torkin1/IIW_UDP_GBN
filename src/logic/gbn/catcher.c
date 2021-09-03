@@ -1,3 +1,4 @@
+#include "gbn/jammer.h"
 #include "gbn/catcher.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -68,27 +69,6 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
 
                     }
 
-                    expectedSeqNum = (rcvdSeqNum + 1) % packet ->header ->queueLen;
-                    
-                    // we let sender know that we received the packet by sending an ack to the port specified in packet
-                    ack = newPacket();
-                    ack ->header ->isAck = true;
-                    ack ->header ->index = packet ->header ->index;
-                    ack ->header ->endIndex = packet ->header ->endIndex;
-                    ack ->header ->msgId = packet ->header ->msgId;
-                    serializedAck = serializePacket(ack);
-
-                    if (sendto(sendAckSocket, serializedAck, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *) &sendAckAddr, sizeof(struct sockaddr_in)) < 0){
-                        err = errno;
-                        logMsg(E, "listenForData: failed to send ack %d to addr %s %d : %s\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port), strerror(err));
-                    }
-                    
-                    else{
-                        logMsg(D, "listenForData: launched ack %d to addr %s %d\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
-                    }
-                    free(serializedAck);
-                    destroyPacket(ack);
-
                     // we write message of received packet in caller msg buffer
                     newSize = *size + packet ->header ->dataLen;
                     *msgBuf = reallocarray(*msgBuf, newSize, sizeof(uint8_t));
@@ -96,21 +76,55 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     memcpy(currentByte, packet ->data, packet ->header ->dataLen);
                     currentByteIndex += packet ->header ->dataLen;
                     *size = newSize;
-                    
-                    // checks if there are more packets to wait                    
-                    more = !(packet ->header ->index == packet ->header ->endIndex);
-                    if(!more){
-                        logMsg(D, "listenForData: message %d from %s:%d has been fully received\n", packet ->header ->msgId, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+
+                    // updates expected packet index
+                    expectedSeqNum = (rcvdSeqNum + 1) % packet ->header ->queueLen;
+
+                    // checks if there are more packets to wait
+                    more = packet->header->index != packet->header->endIndex;
+                    if (!more)
+                    {
+                        logMsg(D, "listenForData: message %d from %s:%d has been fully received\n", packet->header->msgId, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
                     }
-
-                    // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
-
-                    destroyPacket(packet);
-
                 }
                 else {
-                    logMsg(D, "discarded packet %d out of order\n", packet ->header ->index);
+                    logMsg(D, "listenForData: discarded packet %d out of order\n", packet ->header ->index);
+                    if (expectedSeqNum == -1 && packet ->header ->isFirst){
+                        continue;
+                    }
                 }
+
+                // we let sender know that we received the packet by sending an ack to the port specified in packet
+                ack = newPacket();
+                ack->header->isAck = true;
+                ack->header->index = expectedSeqNum;
+                ack->header->endIndex = packet->header->endIndex;
+                ack->header->msgId = packet->header->msgId;
+                serializedAck = serializePacket(ack);
+
+                if (!isJammed())
+                {
+                    if (sendto(sendAckSocket, serializedAck, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *)&sendAckAddr, sizeof(struct sockaddr_in)) < 0)
+                    {
+                        err = errno;
+                        logMsg(E, "listenForData: failed to send ack %d to addr %s %d : %s\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port), strerror(err));
+                    }
+
+                    else
+                    {
+                        logMsg(D, "listenForData: launched ack %d to addr %s %d\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+                    }
+                }
+                else
+                {
+                    logMsg(D, "listenForData: ack %d to addr %s %d jammed!\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+                }
+                free(serializedAck);
+                destroyPacket(ack);
+
+                // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
+
+                destroyPacket(packet);
             }
         }
     }

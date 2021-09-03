@@ -13,7 +13,7 @@ typedef struct header {
 
     bool isAck;                 // true only if this packet is an ACK
     bool isFirst;               // true if this is the first packet of its message
-    int index;                  // index of packet in send queue
+    int index;                  // if data: index of packet in send queue, if ACK: index of expected packet in queue
     int endIndex;               // index of last packet of this message
     int msgId;                  // string id, it identifies the message where the packet has been built from
     int dataLen;                // how many bytes of data in the packet

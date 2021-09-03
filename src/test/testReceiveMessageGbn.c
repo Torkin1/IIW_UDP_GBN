@@ -21,6 +21,7 @@ int rcvdSize;
 
 void testRecvMessageGbn(){
 
+    pthread_t launcherTid;
     
     int sendSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     struct sockaddr_in *sendAddr = calloc(1, sizeof(struct sockaddr_in));
@@ -38,13 +39,17 @@ void testRecvMessageGbn(){
     sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
     recvMessageGbn(receiveSocket, NULL, NULL, &rcvd, &rcvdSize);
 
+    getLauncherId(&launcherTid);
+    notifyLauncher(LAUNCHER_EVENT_SHUTDOWN);
+    pthread_join(launcherTid, NULL);
+
     assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
 
-    sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
+    /*sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
     recvMessageGbn(receiveSocket, NULL, NULL, &rcvd, &rcvdSize);
 
     assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
-
+*/
     free(sendAddr);
     free(recvAddr);
 
