@@ -39,17 +39,18 @@ void testRecvMessageGbn(){
     sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
     recvMessageGbn(receiveSocket, NULL, NULL, &rcvd, &rcvdSize);
 
+    assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
+
+    while (sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL) < 0);
+    recvMessageGbn(receiveSocket, NULL, NULL, &rcvd, &rcvdSize);
+
+    assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
+
     getLauncherId(&launcherTid);
     notifyLauncher(LAUNCHER_EVENT_SHUTDOWN);
     pthread_join(launcherTid, NULL);
 
-    assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
 
-    /*sendMessageGbn(sendSocket, (struct sockaddr *) sendAddr, sizeof(struct sockaddr_in), (void *) msg, strlen(msg) + 1, NULL);
-    recvMessageGbn(receiveSocket, NULL, NULL, &rcvd, &rcvdSize);
-
-    assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
-*/
     free(sendAddr);
     free(recvAddr);
 

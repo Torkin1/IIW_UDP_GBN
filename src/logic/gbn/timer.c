@@ -4,6 +4,15 @@
 #include <stdlib.h>
 #include "logger/logger.h"
 #include <time.h>
+#include "gbn/networkSampler.h"
+#include <math.h>
+
+// coefficients used to calculate adaptive timeout according to probability distribution of event (rtt < timeout)
+typedef enum probabilityDistributionCoefficient{
+
+    NORMAL_DISTRIBUTION = 2,
+    NUM_OF_PROBABILITY_DISTRIBUTIONS
+} ProbabilityDistributionCoefficient;
 
 Timer *newTimer(){
 
@@ -26,31 +35,47 @@ void destroyTimer(Timer *self){
     free(self);
 }
 
-void calcConstTimeout(struct timespec *timeout){
+double calcAdaptiveTimeoutParam(double estimatedRttParam, double devRttParam, ProbabilityDistributionCoefficient c){
 
-    timeout ->tv_sec += TOWAIT_CONST_SECONDS;
-    timeout ->tv_nsec += TOWAIT_CONST_NANOSECONDS;    
-
+    return estimatedRttParam + ((2 * (int) c) * devRttParam);
 }
 
-void calcAdaptiveTimeout(struct timespec *timeout){
+void addToWait(struct timespec *timeout){
 
-    // TODO: calc adaptive time to wait and add it to timeout
+    struct timespec estimatedRtt = {0}, devRtt = {0};
+    int toWait_sec, toWait_nsec;
+
+#ifdef TIMEOUT_ADAPTIVE
+    
+    // gets current rtt and deviance
+    pthread_mutex_lock(&networkSamplerLock);
+    getEstimatedRtt(&estimatedRtt);
+    getDevRtt(&devRtt);
+    pthread_mutex_unlock(&networkSamplerLock);
+
+#endif // TIMEOUT_ADAPTIVE
+    
+    // calcs amount of time to wait for timeout
+    toWait_sec = round(calcAdaptiveTimeoutParam(estimatedRtt.tv_sec, devRtt.tv_sec, NORMAL_DISTRIBUTION));
+    toWait_nsec = round(calcAdaptiveTimeoutParam(estimatedRtt.tv_nsec, devRtt.tv_nsec, NORMAL_DISTRIBUTION));
+    
+    // if rtt and deviance data are not available fallbacks to constant values
+    if (toWait_sec == 0 && toWait_nsec == 0){
+        toWait_sec = TOWAIT_CONST_SECONDS;
+        toWait_nsec = TOWAIT_CONST_NANOSECONDS;
+    }
+
+    // adds time to wait to caller timeout
+    timeout ->tv_sec += toWait_sec;
+    timeout ->tv_nsec += (toWait_nsec != 0)? toWait_nsec : TOWAIT_CONST_NANOSECONDS;
+    logMsg(D, "addToWait: timeout will ring in %d secs %d nsecs at most\n", toWait_sec, toWait_nsec);
+
 }
 
 void calcTimeout(struct timespec *timeout){
 
     clock_gettime(CLOCK_REALTIME, timeout);
-
-    #ifdef TIMEOUT_CONST
-    
-        calcConstTimeout(timeout);
-    #else
-
-        calcAdaptiveTimeout(timeout);
-
-    #endif // TIMEOUT_CONST
-
+    addToWait(timeout);
 }
 
 void *timer(void *args){

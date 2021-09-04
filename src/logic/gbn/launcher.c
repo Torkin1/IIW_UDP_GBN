@@ -17,6 +17,7 @@
 #include <netinet/ip.h>
 #include "gbn/jammer.h"
 #include "gbn/timer.h"
+#include "gbn/networkSampler.h"
 
 // launcher control thread data
 static pthread_t launcherId;
@@ -44,7 +45,7 @@ Timer *getTimerReference(){
 }
 
 // gets the real time signal value corresponding to the provided launcher event
-int getLauncherSignal(LauncherEvent event)
+int getSignalFromLauncherEvent(LauncherEvent event)
 {
 
     int signal = SIGRTMIN + (int) event + 1;
@@ -65,7 +66,7 @@ void launcherCleanup()
     {
         for (LauncherEvent e = 0; e < NUM_OF_LAUNCHER_EVENTS; e ++)
         {
-            if (sigaction(getLauncherSignal(e), (isOldActSet)? NULL : &oldAct, NULL))
+            if (sigaction(getSignalFromLauncherEvent(e), (isOldActSet)? NULL : &oldAct, NULL))
             {
                 int err = errno;
                 logMsg(W, "launcherCleanup: unable to restore original launcher event handler: %s\n", strerror(err));
@@ -119,6 +120,7 @@ int fireLaunchPad(LaunchPad *currentPad)
 
             err = errno;
             logMsg(E, "fireLaunchPad: sendto failed: %s\n", strerror(err));
+            pthread_mutex_unlock(&(getSendTableReference() ->lock));
             return -1;
 
         }
@@ -134,6 +136,7 @@ int fireLaunchPad(LaunchPad *currentPad)
     // updates launch pad stats
     currentPad ->status = SENT;
     currentPad ->launches ++;
+    clock_gettime(CLOCK_REALTIME, &(currentPad ->launchTime));
 
     free(sendbuf);
 
@@ -216,7 +219,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
     logMsg(D, "launcherSigHandler: captured signal %d\n", sig);
     
     // can't use a switch because real time signal value are determined at run time
-    if (sig == getLauncherSignal(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW))
+    if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW))
     {
         int launches;
         LaunchBattery *battery = getLaunchBatteryReference();
@@ -231,7 +234,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         pthread_mutex_unlock(&(window ->lock));
         pthread_mutex_unlock(&(battery ->lock));
 
-        logMsg(D, "launcherSigHandler: all ready packets in window sent\n");
+        logMsg(D, "launcherSigHandler: %d READY packets sent\n", launches);
 
         // (re)starts timeout for the oldest packet in window if not already started
         
@@ -247,7 +250,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         }
 
     }
-    else if (sig == getLauncherSignal(LAUNCHER_EVENT_PACKET_TIMED_OUT))
+    else if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_PACKET_TIMED_OUT))
     {
         int launches = 0;
         LaunchBattery *battery = getLaunchBatteryReference();
@@ -258,7 +261,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         pthread_mutex_lock(&(window ->lock));
 
         launches = sendAllSentPacketsInWindow();
-        logMsg(D, "launcherSigHandler: all sent packets in window sent\n");
+        logMsg(D, "launcherSigHandler: %d SENT packets resent\n",launches);
 
         pthread_mutex_unlock(&(window ->lock));
         pthread_mutex_unlock(&(battery ->lock));
@@ -275,7 +278,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         
     }
 
-    else if (sig == getLauncherSignal(LAUNCHER_EVENT_SHUTDOWN))
+    else if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_SHUTDOWN))
     {
 
         isLauncherAvailable = false;
@@ -297,6 +300,15 @@ void listenForAcks()
     int recvfromRes, base, ackIndex, newBase, newNextSeqNum, ackedPacks;
     Packet *ack;
     LaunchPad *currentPad;
+    struct timespec now;
+    struct timespec sampleRtt = {0};
+    sigset_t blockedSignalsWhileAcking;
+    
+    // all launcher events will be blocked while acking packets (but not when listening for acks)
+    sigemptyset(&blockedSignalsWhileAcking);
+    for (LauncherEvent e = 0; e < NUM_OF_LAUNCHER_EVENTS; e ++){
+        sigaddset(&blockedSignalsWhileAcking, getSignalFromLauncherEvent(e));
+    }
 
     // launcher listens for acks for all its life
     while (isLauncherAvailable)
@@ -328,6 +340,7 @@ void listenForAcks()
             if (ack->header->isAck)
             {
 
+                pthread_sigmask(SIG_BLOCK, &blockedSignalsWhileAcking, NULL);
                 pthread_mutex_lock(&(getSendWindowReference()->lock));
 
                 base = getSendWindowReference()->base;
@@ -352,6 +365,15 @@ void listenForAcks()
                         currentPad->status = ACKED;
                         updateContiguousPads(1);
                         ackedPacks++;
+
+                        // calculates rtt sample and updates estimated rtt
+                        clock_gettime(CLOCK_REALTIME, &now);
+                        sampleRtt.tv_sec = now.tv_sec - currentPad ->launchTime.tv_sec;
+                        sampleRtt.tv_nsec = now.tv_nsec - currentPad ->launchTime.tv_nsec;
+                        pthread_mutex_lock(&networkSamplerLock);
+                        updateEstimatedRtt(sampleRtt);
+                        pthread_mutex_unlock(&networkSamplerLock);
+                        
                     }
                 }
 
@@ -373,8 +395,7 @@ void listenForAcks()
                     if (getTimerReference()->isAlive)
                     {
                         timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);
-                        while (pthread_join(getTimerReference()->timerTid, NULL) < 0)
-                            ;
+                        while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
                     }
 
                     // updates send window
@@ -387,6 +408,7 @@ void listenForAcks()
 
                 pthread_mutex_unlock(&(getLaunchBatteryReference()->lock));
                 pthread_mutex_unlock(&(getSendWindowReference()->lock));
+                pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
                 // send window could now contain packets to send;
                 notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
@@ -434,14 +456,22 @@ void initLauncher()
 {
 
     int err;
+    sigset_t blockedSignalsWhileHandling;
 
     // sets up handler for launcher events
     launcherEventsAct.sa_flags = SA_SIGINFO;
-    launcherEventsAct.sa_sigaction = launcherSigHandler;
-
+    launcherEventsAct.sa_sigaction = launcherSigHandler;    
     for (LauncherEvent e = 0; e < NUM_OF_LAUNCHER_EVENTS; e ++)
     {
-        if (sigaction(getLauncherSignal(e), &launcherEventsAct, (isOldActSet)? NULL : &oldAct))
+        sigemptyset(&launcherEventsAct.sa_mask);
+        for (LauncherEvent be = 0; be < NUM_OF_LAUNCHER_EVENTS; be++)
+        {
+            if (be != e){
+                sigaddset(&blockedSignalsWhileHandling, getSignalFromLauncherEvent(be));
+            }
+        }
+
+        if (sigaction(getSignalFromLauncherEvent(e), &launcherEventsAct, (isOldActSet)? NULL : &oldAct))
         {
             int err = errno;
             logMsg(E, "initLauncher: unable to set launcher event handler: %s\n", strerror(err));
@@ -516,7 +546,7 @@ int notifyLauncher(LauncherEvent event)
 
     logMsg(D, "notifyLauncher: requested to notify launcher of event %d\n", event);
 
-    if ((err = pthread_kill(launcherId, getLauncherSignal(event))))
+    if ((err = pthread_kill(launcherId, getSignalFromLauncherEvent(event))))
     {
         logMsg(E, "notifyLauncher: failed to send signal to launcher: %s\n", strerror(err));
         return -1;

@@ -6,6 +6,7 @@
 #include "gbn/packet.h"
 #include "gbn/window.h"
 #include "gbn/sortingTable.h"
+#include <time.h>
 
 // max num of packets that can occupy the queue. must be much greater than sendWindo
 #define QUEUE_LEN 15//100   
@@ -25,9 +26,11 @@ typedef enum launchPadStatus{
 // Every seat in the launch battery is a launch pad, which can hold a packet and tracks its status
 typedef struct launchPad{
 
-    Packet *packet;             // packet in the seat
-    unsigned int launches;      // number of times the packet in the seat has been transmitted
-    LaunchPadStatus status;     // status of launch pad
+    Packet *packet;                 // packet in the seat
+    unsigned int launches;          // number of times the packet in the seat has been transmitted
+    LaunchPadStatus status;         // status of launch pad
+    struct timespec launchTime;     // abs time of last launch
+
 
 } LaunchPad;
 
@@ -54,7 +57,7 @@ int destroyLaunchBattery(LaunchBattery *self);
 bool isLaunchPadEmpty(LaunchPad *self);
 
 // adds packets to launchbattery
-int addToLaunchBatteryAtomically(Packet *packets[], int n);
+int addToLaunchBattery(Packet *packets[], int n);
 
 // tells if there is enough space in the battery for n packets
 bool willTheyFit(int n);

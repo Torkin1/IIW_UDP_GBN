@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include "gbn/jammer.h"
 #include "gbn/catcher.h"
 #include <stdbool.h>
@@ -57,7 +59,7 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     // Check if this is the first packet.
                     if (expectedSeqNum == -1 && packet ->header ->isFirst){
 
-                        logMsg(D, "starting reception of message %d from %s %d\n", packet ->header ->msgId, inet_ntoa(senderAddrBuf.sin_addr), ntohs(senderAddrBuf.sin_port));
+                        logMsg(D, "listenForData: starting reception of message %d from %s %d\n", packet ->header ->msgId, inet_ntoa(senderAddrBuf.sin_addr), ntohs(senderAddrBuf.sin_port));
                         
                         // We connect to remote sender so that we receive only its packets
                         connect(sd, (struct sockaddr *) &senderAddrBuf, senderAddrlenBuf);
@@ -94,35 +96,38 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     }
                 }
 
-                // we let sender know that we received the packet by sending an ack to the port specified in packet
-                ack = newPacket();
-                ack->header->isAck = true;
-                ack->header->index = expectedSeqNum;
-                ack->header->endIndex = packet->header->endIndex;
-                ack->header->msgId = packet->header->msgId;
-                serializedAck = serializePacket(ack);
+                if (expectedSeqNum != -1 || packet ->header ->isFirst){
 
-                if (!isJammed())
-                {
-                    if (sendto(sendAckSocket, serializedAck, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *)&sendAckAddr, sizeof(struct sockaddr_in)) < 0)
+                    // we let sender know that we received the packet by sending an ack to the port specified in packet
+                    ack = newPacket();
+                    ack->header->isAck = true;
+                    ack->header->index = expectedSeqNum;
+                    ack->header->endIndex = packet->header->endIndex;
+                    ack->header->msgId = packet->header->msgId;
+                    serializedAck = serializePacket(ack);
+
+                    if (!isJammed())
                     {
-                        err = errno;
-                        logMsg(E, "listenForData: failed to send ack %d to addr %s %d : %s\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port), strerror(err));
-                    }
+                        if (sendto(sendAckSocket, serializedAck, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *)&sendAckAddr, sizeof(struct sockaddr_in)) < 0)
+                        {
+                            err = errno;
+                            logMsg(E, "listenForData: failed to send ack %d to addr %s %d : %s\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port), strerror(err));
+                        }
 
+                        else
+                        {
+                            logMsg(D, "listenForData: launched ack %d to addr %s %d\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+                        }
+                    }
                     else
                     {
-                        logMsg(D, "listenForData: launched ack %d to addr %s %d\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
+                        logMsg(D, "listenForData: ack %d to addr %s %d jammed!\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
                     }
-                }
-                else
-                {
-                    logMsg(D, "listenForData: ack %d to addr %s %d jammed!\n", ack->header->index, inet_ntoa(sendAckAddr.sin_addr), ntohs(sendAckAddr.sin_port));
-                }
-                free(serializedAck);
-                destroyPacket(ack);
+                    free(serializedAck);
+                    destroyPacket(ack);
 
-                // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
+                    // TODO: (re)starts timeout of last packet received. If timeout, we discard the entire message and return an error
+                }
 
                 destroyPacket(packet);
             }

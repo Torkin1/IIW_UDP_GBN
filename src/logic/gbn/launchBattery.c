@@ -187,16 +187,11 @@ int updateContiguousPads(int change){
 
 
 // adds packets to launchbattery atomically
-int addToLaunchBatteryAtomically(Packet *packets[], int n){
+int addToLaunchBattery(Packet *packets[], int n){
 
     logMsg(D, "addToLaunchBattery: about to add %d packets to battery\n", n);
 
     int err;
-    if ((err = pthread_mutex_lock(&(getLaunchBatteryReference() ->lock)))){
-
-        logMsg(E, "addToLaunchBattery: unable to lock battery: %s\n", strerror(err));
-        return -1;
-    }
 
     // if there is not enough contiguous space, the packets will not be added
     if(!willTheyFit(n)){
@@ -230,33 +225,8 @@ int addToLaunchBatteryAtomically(Packet *packets[], int n){
         }
     }
     getLaunchBatteryReference() ->nextAvailableIndex = atNextAvailableIndex;
-
-    if ((err = pthread_mutex_unlock(&(getLaunchBatteryReference() ->lock)))){
-        logMsg(E, "addToLaunchBattery: unable to unlock battery: %s\n", strerror(err));
-        return -1;
-    }
-
     logMsg(D, "addToLaunchBattery: packets added at index %d\n", start);
-
-    // notifies launcher thread if new packets are in the send window
-    if ((err = pthread_mutex_lock(&(getSendWindowReference() ->lock)))){
-        logMsg(E, "addToLaunchBattery: unable to lock sendWindow: %s\n", strerror(err));
-        return -1;
-    }
-
-    if (isInWindow(start)){
-        if (notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW)){
-            logMsg(E, "addToLaunchBattery: couldn't notify the launcher\n");
-            return -1;
-        }
-        logMsg(D, "addToLaunchBattery: launcher notified about event %d\n", LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
-    }
-
-    if ((err = pthread_mutex_unlock(&(getSendWindowReference() ->lock)))){
-        logMsg(E, "addToLaunchBattery: unable to unlock send window: %s\n", strerror(err));
-        return -1;
-    }
-
+    
     return 0;
 
 }

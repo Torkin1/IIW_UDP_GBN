@@ -3,15 +3,18 @@
 
 #include <pthread.h>
 
-typedef struct networkParams {
+extern pthread_mutex_t networkSamplerLock;       // lock on network sampler ref
 
-    pthread_mutex_t lock;
-    float rtt;            // Round Trip Time
-    float uploadTime;     // L/R
+// @param sampleRtt value of sampled rtt
+void updateEstimatedRtt(struct timespec sampleRtt);
 
-} NetworkParams;
+// @param estimatedRttBuf pointer to an already initialized buffer which will hold current value of rtt
+void getEstimatedRtt(struct timespec *estimatedRttBuf);
 
-NetworkParams *getNetworkParamsReference();
-void destroyNetworkParams(NetworkParams *self);
+// @param devRttBuf pointer to an already initialized buffer which will hold current value of devRtt
+void getDevRtt(struct timespec *devRttBuf);
+
+void destroyNetworkSampler();
+
 
 #endif // NETWORKSAMPLER_H_INCLUDED

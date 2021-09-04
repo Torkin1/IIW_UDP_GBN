@@ -1,10 +1,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#ifdef TIMEOUT_CONST
-    #define TOWAIT_CONST_SECONDS 3;          
-    #define TOWAIT_CONST_NANOSECONDS 0;
-#endif // TIMEOUT_CONST
+#define TOWAIT_CONST_SECONDS 3;          
+#define TOWAIT_CONST_NANOSECONDS 0;
 
 // Describes what the timer has to do when it timeouts
 typedef enum atTimeout{
