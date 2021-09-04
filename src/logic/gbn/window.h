@@ -8,7 +8,6 @@ typedef struct sendWindow{
 
     int base;               // last non-acked packet index in window
     int nextSeqNum;         // Index of first READY packet next to the last SENT packet in window
-    pthread_mutex_t lock;
 
 } SendWindow;
 

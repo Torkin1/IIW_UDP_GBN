@@ -11,6 +11,10 @@
 // max num of packets that can occupy the queue. must be much greater than sendWindo
 #define QUEUE_LEN 15//100   
 
+extern pthread_mutex_t sendWindowLock;
+extern pthread_mutex_t sendTableLock;
+extern pthread_mutex_t launchBatteryLock;
+
 // Each launch pad can only be in one of the following statuses
 typedef enum launchPadStatus{
 
@@ -45,7 +49,6 @@ typedef struct launchBattery{
                                                 Must be updated whenever new packets are added or packets in battery are ACKED or LOST
                                             */
     int contiguousPadsAvailable;            
-    pthread_mutex_t lock;                   // lock on the battery
     int nextAvailableIndex;                 // index next to the last pad occupied
 
 } LaunchBattery;

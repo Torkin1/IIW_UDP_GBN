@@ -9,22 +9,30 @@
 // singleton send window
 static SendWindow *sendWindow;
 static pthread_once_t isSendWindowInitialized = PTHREAD_ONCE_INIT;
+pthread_mutex_t sendWindowLock = PTHREAD_MUTEX_INITIALIZER;
 
 // singleton sorting table
 static SortingTable *sendTable;
 static pthread_once_t isSendTableInitialized = PTHREAD_ONCE_INIT;
+pthread_mutex_t sendTableLock = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t launchBatteryLock = PTHREAD_MUTEX_INITIALIZER;
 
 
 void initSendWindow(){
 
+    logMsg(D, "initSendWindow: new send window requested\n");
     sendWindow = newSendWindow();
+    logMsg(D, "initSendWindow: send window created\n");
 }
 
 SendWindow *getSendWindowReference(){
-
+    
+    logMsg(D, "getSendWindowReference: requested window reference\n");
     if (sendWindow == NULL){
 
         pthread_once(&isSendWindowInitialized, initSendWindow);
+        logMsg(D, "getSendWindowReference: pthread_once returned\n");
     }
 
     return sendWindow;
@@ -98,19 +106,12 @@ LaunchBattery *newLaunchBattery(){
 
     launchBattery->contiguousPadsAvailable = QUEUE_LEN;
 
-    pthread_mutex_init(&(launchBattery -> lock), NULL);
-
     return launchBattery;
 }
 
 // caution: destroy the battery only when you are sure that no threads are willing to use it anymore
 int destroyLaunchBattery(LaunchBattery *self){
 
-    if (pthread_mutex_destroy(&(self ->lock))){
-        int err = errno;
-        logMsg(E, "destroyLaunchBattery: can't destroy lock on battery: %s\n", strerror(err));
-        return -1;
-    }
     for (int i = 0; i < QUEUE_LEN; i ++){
         free(self -> battery[i]);
     }
@@ -135,6 +136,11 @@ static pthread_once_t isLaunchBatteryInitialized = PTHREAD_ONCE_INIT;
 void initLaunchBattery(){
 
     launchBattery = newLaunchBattery();
+    
+    // triggers initialization of other components needed by launchbattery to work. This is needed because other components use signal-unsafe functions
+    getSendTableReference();
+    getSendWindowReference();
+    getLauncherId(NULL);
 
 }
 
@@ -190,8 +196,6 @@ int updateContiguousPads(int change){
 int addToLaunchBattery(Packet *packets[], int n){
 
     logMsg(D, "addToLaunchBattery: about to add %d packets to battery\n", n);
-
-    int err;
 
     // if there is not enough contiguous space, the packets will not be added
     if(!willTheyFit(n)){

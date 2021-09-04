@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#define TOWAIT_CONST_SECONDS 3;          
+#define TOWAIT_CONST_SECONDS 1;          
 #define TOWAIT_CONST_NANOSECONDS 0;
 
 // Describes what the timer has to do when it timeouts

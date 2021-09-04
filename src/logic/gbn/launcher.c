@@ -107,7 +107,9 @@ int fireLaunchPad(LaunchPad *currentPad)
     sendbufSize = calcPacketSize(currentPad ->packet);
 
     // dest addr can be retrieved in send table
-    pthread_mutex_lock(&(getSendTableReference() ->lock));
+    logMsg(D, "fireLaunchPad: about to acquire lock on send table\n");
+    pthread_mutex_lock(&sendTableLock);
+    logMsg(D, "fireLaunchPad: acquired lock on send table\n");
     SortingEntry *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
     
     // packet shall be discarded with a probability of p. This is to simulate a loss event
@@ -120,7 +122,8 @@ int fireLaunchPad(LaunchPad *currentPad)
 
             err = errno;
             logMsg(E, "fireLaunchPad: sendto failed: %s\n", strerror(err));
-            pthread_mutex_unlock(&(getSendTableReference() ->lock));
+            pthread_mutex_unlock(&sendTableLock);
+            logMsg(D, "fireLaunchPad: acquired lock on send table\n");
             return -1;
 
         }
@@ -131,7 +134,8 @@ int fireLaunchPad(LaunchPad *currentPad)
         logMsg(D, "fireLaunchPad: launchPad %d is jammed!\n", currentPad ->packet ->header ->index);
     }
 
-    pthread_mutex_unlock(&(getSendTableReference() ->lock));
+    pthread_mutex_unlock(&sendTableLock);
+    logMsg(D, "fireLaunchPad: released lock on send table\n");
 
     // updates launch pad stats
     currentPad ->status = SENT;
@@ -222,17 +226,19 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
     if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW))
     {
         int launches;
-        LaunchBattery *battery = getLaunchBatteryReference();
-        SendWindow *window = getSendWindowReference();
 
         // sends all ready packets in send window
-        pthread_mutex_lock(&(battery ->lock));
-        pthread_mutex_lock(&(window ->lock));
+        pthread_mutex_lock(&launchBatteryLock);
+        logMsg(D, "launcherSigHandler: acquired lock on battery\n");
+        pthread_mutex_lock(&sendWindowLock);
+        logMsg(D, "launcherSigHandler: acquired lock on sendWindow\n");
 
         launches = sendAllReadyPacketsInWindow();
 
-        pthread_mutex_unlock(&(window ->lock));
-        pthread_mutex_unlock(&(battery ->lock));
+        pthread_mutex_unlock(&sendWindowLock);
+        logMsg(D, "launcherSigHandler: released lock on sendWindow\n");
+        pthread_mutex_unlock(&launchBatteryLock);
+        logMsg(D, "launcherSigHandler: released lock on battery\n");
 
         logMsg(D, "launcherSigHandler: %d READY packets sent\n", launches);
 
@@ -243,39 +249,38 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
             {
                 startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
             }
+            /*
             else
             {
                 timeout(getTimerReference(), AT_TIMEOUT_RESTART);
             }
+            */
         }
 
     }
     else if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_PACKET_TIMED_OUT))
     {
         int launches = 0;
-        LaunchBattery *battery = getLaunchBatteryReference();
-        SendWindow *window = getSendWindowReference();
         
         // sends all sent packets in send window
-        pthread_mutex_lock(&(battery ->lock));
-        pthread_mutex_lock(&(window ->lock));
+        pthread_mutex_lock(&launchBatteryLock);
+        pthread_mutex_lock(&sendWindowLock);
 
         launches = sendAllSentPacketsInWindow();
         logMsg(D, "launcherSigHandler: %d SENT packets resent\n",launches);
 
-        pthread_mutex_unlock(&(window ->lock));
-        pthread_mutex_unlock(&(battery ->lock));
+        pthread_mutex_unlock(&sendWindowLock);
+        pthread_mutex_unlock(&launchBatteryLock);
 
         // restarts timer
-        if (launches > 0){
-            if (getTimerReference()->isAlive)
-            {
-                while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
-            }
+        if (getTimerReference()->isAlive)
+        {
+            while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
+        }
+        if (launches > 0)
+        {
             startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
         }
-       
-        
     }
 
     else if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_SHUTDOWN))
@@ -341,7 +346,7 @@ void listenForAcks()
             {
 
                 pthread_sigmask(SIG_BLOCK, &blockedSignalsWhileAcking, NULL);
-                pthread_mutex_lock(&(getSendWindowReference()->lock));
+                pthread_mutex_lock(&sendWindowLock);
 
                 base = getSendWindowReference()->base;
 
@@ -350,7 +355,7 @@ void listenForAcks()
                 logMsg(D, "listenForAcks: accepted ACK with msgId=%d and index=%d\n", ack->header->msgId, ackIndex);
 
                 // all packets up to the specified index are ACKED
-                pthread_mutex_lock(&(getLaunchBatteryReference()->lock));
+                pthread_mutex_lock(&launchBatteryLock);
 
                 if (ackIndex < base)
                 {
@@ -386,16 +391,16 @@ void listenForAcks()
                         logMsg(D, "listenForAcks: message %d fully sent\n", ack->header->msgId);
 
                         // remove the corresponding entry from the send table
-                        pthread_mutex_lock(&(getSendTableReference()->lock));
+                        pthread_mutex_lock(&sendTableLock);
                         removeFromSortingTable(getSendTableReference(), ack->header->msgId);
-                        pthread_mutex_unlock(&(getSendTableReference()->lock));
+                        pthread_mutex_unlock(&sendTableLock);
                     }
 
                     // timeout of oldest packet in window must be stopped
                     if (getTimerReference()->isAlive)
                     {
-                        timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);
-                        while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
+                        timeout(getTimerReference(), AT_TIMEOUT_RESTART);
+                        //while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
                     }
 
                     // updates send window
@@ -406,8 +411,8 @@ void listenForAcks()
                     logMsg(D, "listenForAcks: updated send window base: %d, nextSeqNum: %d\n", getSendWindowReference()->base, getSendWindowReference()->nextSeqNum);
                 }
 
-                pthread_mutex_unlock(&(getLaunchBatteryReference()->lock));
-                pthread_mutex_unlock(&(getSendWindowReference()->lock));
+                pthread_mutex_unlock(&launchBatteryLock);
+                pthread_mutex_unlock(&sendWindowLock);
                 pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
                 // send window could now contain packets to send;

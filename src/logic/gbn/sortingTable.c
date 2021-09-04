@@ -10,7 +10,6 @@ SortingTable *newSortingTable(){
 
     SortingTable *self = calloc(1, sizeof(SortingTable));
     self ->table = newHashTable();
-    pthread_mutex_init(&(self ->lock), NULL);
     return self;
 
 }
@@ -24,7 +23,6 @@ SortingEntry *newSortingEntry(){
 void destroySortingTable(SortingTable *self){
 
     destroyHashTable(self ->table);
-    pthread_mutex_destroy(&(self ->lock));
     free(self);
 
 }

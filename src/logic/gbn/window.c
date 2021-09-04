@@ -10,20 +10,15 @@ static int winsize;
 SendWindow *newSendWindow(){
 
     SendWindow *sendWindow = calloc(1, sizeof(SendWindow));
-    pthread_mutex_init(&(sendWindow ->lock), NULL);
     winsize = WINSIZE_DEFAULT;
     sendWindow ->nextSeqNum = winsize;
+    logMsg(D, "newSendWindow: send window object allocated\n");
 
     return sendWindow;
 }
 
 void destroySendWindow(SendWindow *self){
 
-    int err;
-
-    if ((err = pthread_mutex_destroy(&(self ->lock)))){
-        logMsg(W, "destroySendWindow: can't destroy lock: %s\n", strerror(err));
-    }
     free(self);
 
 }
