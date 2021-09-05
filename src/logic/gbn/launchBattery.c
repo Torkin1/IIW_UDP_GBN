@@ -21,18 +21,14 @@ pthread_mutex_t launchBatteryLock = PTHREAD_MUTEX_INITIALIZER;
 
 void initSendWindow(){
 
-    logMsg(D, "initSendWindow: new send window requested\n");
     sendWindow = newSendWindow();
-    logMsg(D, "initSendWindow: send window created\n");
 }
 
 SendWindow *getSendWindowReference(){
     
-    logMsg(D, "getSendWindowReference: requested window reference\n");
     if (sendWindow == NULL){
 
         pthread_once(&isSendWindowInitialized, initSendWindow);
-        logMsg(D, "getSendWindowReference: pthread_once returned\n");
     }
 
     return sendWindow;

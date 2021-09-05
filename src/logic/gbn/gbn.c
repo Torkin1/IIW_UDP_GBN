@@ -11,8 +11,6 @@
 #include <pthread.h>
 
 int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *msg, int size, void (*errorHandler)(SendError)){
-
-    int err;
     
     // divides message in packets
     Packet **packets;
@@ -20,12 +18,10 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
 
     // adds the packets atomically to the battery
     pthread_mutex_lock(&launchBatteryLock);
-    logMsg(D, "sendMessageGbn: acquired lock on battery\n");
     if (addToLaunchBattery(packets, numOfPackets)){
 
         logMsg(E, "sendMessageGbn: can't add packets to the battery\n");
-        err = pthread_mutex_unlock(&launchBatteryLock);
-        logMsg(E, "unlock1: %s\n", strerror(err));
+        pthread_mutex_unlock(&launchBatteryLock);
         return -1;
     }
     logMsg(D, "sendMessageGbn: packets added to the battery\n");
@@ -37,16 +33,11 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     sendEntry ->addrlen = addrlen;
     sendEntry ->errorHandler = (void (*)(int)) errorHandler;
     pthread_mutex_lock(&sendTableLock);
-    logMsg(D, "sendMessageGbn: acquired lock on send table\n");
     addToSortingTable(getSendTableReference(), packets[0] ->header ->msgId, sendEntry);
-    err = pthread_mutex_unlock(&sendTableLock);
-    logMsg(D, "sendMessageGbn: released lock on send table\n");
-    logMsg(E, "unlock2: %s\n", strerror(err));
+    pthread_mutex_unlock(&sendTableLock);
 
     // now new packets in battery are safe to consume
-    err = pthread_mutex_unlock(&launchBatteryLock);
-    logMsg(E, "unlock3: %s\n", strerror(err));
-    logMsg(D, "sendMessageGbn: released lock on battery\n");
+    pthread_mutex_unlock(&launchBatteryLock);
 
     // notifies launcher thread to check if new packets are in the send window
     notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);

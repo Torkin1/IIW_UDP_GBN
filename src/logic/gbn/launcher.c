@@ -107,9 +107,7 @@ int fireLaunchPad(LaunchPad *currentPad)
     sendbufSize = calcPacketSize(currentPad ->packet);
 
     // dest addr can be retrieved in send table
-    logMsg(D, "fireLaunchPad: about to acquire lock on send table\n");
     pthread_mutex_lock(&sendTableLock);
-    logMsg(D, "fireLaunchPad: acquired lock on send table\n");
     SortingEntry *currentSendEntry = getFromSortingTable(getSendTableReference(), currentPad ->packet ->header ->msgId);
     
     // packet shall be discarded with a probability of p. This is to simulate a loss event
@@ -123,7 +121,6 @@ int fireLaunchPad(LaunchPad *currentPad)
             err = errno;
             logMsg(E, "fireLaunchPad: sendto failed: %s\n", strerror(err));
             pthread_mutex_unlock(&sendTableLock);
-            logMsg(D, "fireLaunchPad: acquired lock on send table\n");
             return -1;
 
         }
@@ -135,7 +132,6 @@ int fireLaunchPad(LaunchPad *currentPad)
     }
 
     pthread_mutex_unlock(&sendTableLock);
-    logMsg(D, "fireLaunchPad: released lock on send table\n");
 
     // updates launch pad stats
     currentPad ->status = SENT;
@@ -229,16 +225,12 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
 
         // sends all ready packets in send window
         pthread_mutex_lock(&launchBatteryLock);
-        logMsg(D, "launcherSigHandler: acquired lock on battery\n");
         pthread_mutex_lock(&sendWindowLock);
-        logMsg(D, "launcherSigHandler: acquired lock on sendWindow\n");
 
         launches = sendAllReadyPacketsInWindow();
 
         pthread_mutex_unlock(&sendWindowLock);
-        logMsg(D, "launcherSigHandler: released lock on sendWindow\n");
         pthread_mutex_unlock(&launchBatteryLock);
-        logMsg(D, "launcherSigHandler: released lock on battery\n");
 
         logMsg(D, "launcherSigHandler: %d READY packets sent\n", launches);
 
@@ -247,14 +239,8 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         if (launches > 0){
             if (!(getTimerReference()->isAlive))
             {
-                startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
+                startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_RESTART, ring);
             }
-            /*
-            else
-            {
-                timeout(getTimerReference(), AT_TIMEOUT_RESTART);
-            }
-            */
         }
 
     }
@@ -273,14 +259,22 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         pthread_mutex_unlock(&launchBatteryLock);
 
         // restarts timer
+        /*
         if (getTimerReference()->isAlive)
         {
             while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
         }
         if (launches > 0)
         {
-            startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_SHUTDOWN, ring);
+            startTimer(getTimerReference(), AT_TIMEOUT_RING_THEN_RESTART, ring);
+        }*/
+        
+        if (launches == 0 && getTimerReference()->isAlive)
+        {
+            timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);
+            pthread_join(getTimerReference() ->timerTid, NULL);
         }
+
     }
 
     else if (sig == getSignalFromLauncherEvent(LAUNCHER_EVENT_SHUTDOWN))
@@ -400,7 +394,6 @@ void listenForAcks()
                     if (getTimerReference()->isAlive)
                     {
                         timeout(getTimerReference(), AT_TIMEOUT_RESTART);
-                        //while (pthread_join(getTimerReference()->timerTid, NULL) < 0);
                     }
 
                     // updates send window
@@ -413,10 +406,10 @@ void listenForAcks()
 
                 pthread_mutex_unlock(&launchBatteryLock);
                 pthread_mutex_unlock(&sendWindowLock);
-                pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
                 // send window could now contain packets to send;
                 notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
+                pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
                 destroyPacket(ack);
             }
@@ -461,7 +454,7 @@ void initLauncher()
 {
 
     int err;
-    sigset_t blockedSignalsWhileHandling;
+    //sigset_t blockedSignalsWhileHandling;
 
     // sets up handler for launcher events
     launcherEventsAct.sa_flags = SA_SIGINFO;
@@ -472,7 +465,7 @@ void initLauncher()
         for (LauncherEvent be = 0; be < NUM_OF_LAUNCHER_EVENTS; be++)
         {
             if (be != e){
-                sigaddset(&blockedSignalsWhileHandling, getSignalFromLauncherEvent(be));
+                sigaddset(&launcherEventsAct.sa_mask, getSignalFromLauncherEvent(be));
             }
         }
 
@@ -488,6 +481,7 @@ void initLauncher()
         }
     }
 
+    
     // starts launcher
     pthread_mutex_lock(&launcherInitializerLock);
     if ((err = pthread_create(&launcherId, NULL, launcher, NULL)))

@@ -12,7 +12,6 @@ SendWindow *newSendWindow(){
     SendWindow *sendWindow = calloc(1, sizeof(SendWindow));
     winsize = WINSIZE_DEFAULT;
     sendWindow ->nextSeqNum = winsize;
-    logMsg(D, "newSendWindow: send window object allocated\n");
 
     return sendWindow;
 }

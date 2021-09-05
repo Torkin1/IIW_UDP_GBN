@@ -68,7 +68,7 @@ void addToWait(struct timespec *timeout){
     // adds time to wait to caller timeout
     timeout ->tv_sec += toWait_sec;
     timeout ->tv_nsec += (toWait_nsec != 0)? toWait_nsec : TOWAIT_CONST_NANOSECONDS;
-    logMsg(D, "addToWait: timeout will ring in %d secs %d nsecs at most\n", toWait_sec, toWait_nsec);
+    logMsg(D, "addToWait: timer will timeout in %d secs %d nsecs at most\n", toWait_sec, toWait_nsec);
 
 }
 
@@ -93,7 +93,7 @@ void *timer(void *args){
 
         pthread_mutex_lock(&(self ->atTimeoutLock));
         calcTimeout(&timeout);
-        logMsg(D, "timer: about to start wait\n");
+        logMsg(D, "timer: about to start timer\n");
         pthread_cond_timedwait(&(self ->atTimeoutCond), &(self ->atTimeoutLock), &timeout);
         logMsg(D, "timer: reached timeout\n");
         switch (self ->atTimeout)
@@ -166,7 +166,7 @@ int startTimer(Timer *self, AtTimeout atTimeout, void (*ring) (void)){
 
 void timeout(Timer *self, AtTimeout atTimeout){
     
-    logMsg(D, "timeout: alarm will go off with atTimeout=%d\n", atTimeout);
+    logMsg(D, "timeout: requested timeout with atTimeout %d\n", atTimeout);
     
     if (atTimeout >= AT_TIMEOUT_RING_THEN_RESTART){
         pthread_mutex_lock(&self ->atTimeoutLock);

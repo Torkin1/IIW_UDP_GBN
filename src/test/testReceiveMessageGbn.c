@@ -46,6 +46,12 @@ void testRecvMessageGbn(){
 
     assertEquals(msg, rcvd, rcvdSize, NULL, NULL);
 
+    logMsg(D, "testReceiveMessageGbn: recvMessageGbn returned for the last time\n");
+    for(int i = 5; i > 0; i --){
+        logMsg(D, "testReceiveMessageGbn: closing test in %d secs\n", i);
+        sleep(1);
+    }
+
     getLauncherId(&launcherTid);
     notifyLauncher(LAUNCHER_EVENT_SHUTDOWN);
     pthread_join(launcherTid, NULL);
