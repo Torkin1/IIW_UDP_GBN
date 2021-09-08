@@ -15,8 +15,7 @@ typedef struct sendWindow{
 void destroySendWindow(SendWindow *self);
 SendWindow *newSendWindow();
 
+// @return max num of packets that can be in the window at the same time
 int getWinSize();
-int calcAdaptiveWinSize();
-int updateAdaptiveWinSize(float rtt);
 
 #endif // WINDOW_H_INCLUDED

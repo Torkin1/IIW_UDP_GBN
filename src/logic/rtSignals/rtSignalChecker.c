@@ -1,5 +1,5 @@
-#include "rtSignalsChecker.h"
-#include "../logger/logger.h"
+#include "rtSignals/rtSignalsChecker.h"
+#include "logger/logger.h"
 #include <signal.h>
 
 int checkRtSignal(int rtSig){

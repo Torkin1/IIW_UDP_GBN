@@ -53,7 +53,13 @@ typedef struct launchBattery{
 
 } LaunchBattery;
 
+// @return reference to singleton launch battery reference
 LaunchBattery *getLaunchBatteryReference();
+
+/*
+    Destroys every pad in the battery, then frees memory pointed from self
+    @param self poiner to battery target
+*/
 int destroyLaunchBattery(LaunchBattery *self);
 
 // tells if a launch pad is available to host a new packet

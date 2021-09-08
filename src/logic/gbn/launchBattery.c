@@ -117,9 +117,12 @@ int destroyLaunchBattery(LaunchBattery *self){
 
 }
 
+// destroys pad and the packet contained in it
 void destroyLaunchPad(LaunchPad *self){
 
-   free(self ->packet);
+    if (self -> packet != NULL){
+        destroyPacket(self ->packet);
+   }
    free(self);
 
 }

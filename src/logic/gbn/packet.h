@@ -42,9 +42,19 @@ uint8_t *serializePacket(Packet *packet);
 // deserialize data from bytes into a dynamically allocated Packet
 Packet *deserializePacket(uint8_t *bytes);
 
+// @return size of serialized packet header in bytes
 int calcHeaderSize();
+
+// @return size of serialized ACK in bytes
 int calcAckSize();
+
+/*
+    @param p pointer to a packet
+    @return size of serialized packet *p in bytes
+*/
 int calcPacketSize(Packet *p);
+
+// @return max number of bytes allowed to serialize data
 int calcMaxDataLen();
 
 #endif // PACKET_H_INCLUDED

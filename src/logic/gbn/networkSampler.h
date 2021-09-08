@@ -14,6 +14,7 @@ void getEstimatedRtt(struct timespec *estimatedRttBuf);
 // @param devRttBuf pointer to an already initialized buffer which will hold current value of devRtt
 void getDevRtt(struct timespec *devRttBuf);
 
+// destroys structure used internally by NetworkSampler to store network data. Call this only if one of the other functions defined here have been called at least once
 void destroyNetworkSampler();
 
 

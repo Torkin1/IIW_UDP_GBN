@@ -27,22 +27,3 @@ int getWinSize(){
     return winsize;
 
 }
-
-int calcAdaptiveWinSize(){
-
-    // TODO: actually calculate winsize
-    int res = -1;
-
-    return res;
-
-}
-
-int updateAdaptiveWinSize(float rtt){
-
-    int old = getWinSize();
-
-    // TODO:
-
-    return old;
-
-}

@@ -3,8 +3,6 @@
 
 #include <pthread.h>
 
-#define ACK_LISTENING_PORT 32773
-
 // Launcher must respond to all events listed below
 typedef enum launcherEvent{
 
