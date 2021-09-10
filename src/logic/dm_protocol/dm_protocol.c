@@ -22,15 +22,3 @@ int reciveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
     logMsg(D, "reciveMessageDMProtocol: done\n");
 
   }
-
-
-//alla dest_addr_size passo come sizeof (sockaddr_in) cioè ip usato a lvl 3
-//serializzo il messaggio e poi lo mando
-
-//problema FIle troppo grandi, se li limito? L'heap non è enorma nache se
-//li lascio così, devo tenere una dimensione limitata, oppure un'altra cosa
-//metto in head un bool (more) per vedere se ha ricevuto il file lo apre e ci scrive
-//i dati, se ci è ancora true allora deve scrivere ulteriormente, finché non è
-//falso, aggiungo questo param in message
-
-//nel header di dm_protocol
