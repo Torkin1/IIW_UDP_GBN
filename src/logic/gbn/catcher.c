@@ -106,7 +106,7 @@ int listenForData(int sd, struct sockaddr *senderAddr, socklen_t *senderAddrlen,
                     ack->header->msgId = packet->header->msgId;
                     serializedAck = serializePacket(ack);
 
-                    if (!isJammed())
+                    if (true) // TODO: For now, ACK will not be jammed. Further requirements clarification is required for a more stable change. See #38
                     {
                         if (sendto(sendAckSocket, serializedAck, calcAckSize(), MSG_NOSIGNAL, (struct sockaddr *)&sendAckAddr, sizeof(struct sockaddr_in)) < 0)
                         {
