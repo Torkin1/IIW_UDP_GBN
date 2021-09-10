@@ -10,16 +10,16 @@
 
 
 //header of the message, needed for the serialization
-typedef struct header{
+typedef struct message_header{
   int commands;
   int status;
   int payload_lentgh;
   bool more;
-} Header;
+} MessageHeader;
 
 //The basic info unit used on a message
 typedef struct message{
-  Header *header; //messages header
+  MessageHeader *message_header; //messages header
   void *payload; //messages payload
 } Message;
 

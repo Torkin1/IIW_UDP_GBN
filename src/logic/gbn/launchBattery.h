@@ -9,7 +9,7 @@
 #include <time.h>
 
 // max num of packets that can occupy the queue. must be much greater than sendWindo
-#define QUEUE_LEN 15//100   
+#define QUEUE_LEN 1024//100   
 
 extern pthread_mutex_t sendWindowLock;
 extern pthread_mutex_t sendTableLock;
@@ -42,13 +42,13 @@ typedef struct launchPad{
 typedef struct launchBattery{
 
     LaunchPad *battery[QUEUE_LEN];          // the actual queue
-    
+
                                             /*
                                                 tracks number of contiguous pads available.
                                                 This redundancy is useful because it kills the need to check every pad to know if there is enough space to add more packets.
                                                 Must be updated whenever new packets are added or packets in battery are ACKED or LOST
                                             */
-    int contiguousPadsAvailable;            
+    int contiguousPadsAvailable;
     int nextAvailableIndex;                 // index next to the last pad occupied
 
 } LaunchBattery;

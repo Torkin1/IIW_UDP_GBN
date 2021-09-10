@@ -1,16 +1,18 @@
 #ifndef DM_PROTCOL_H_INCLUDED
 #define DM_PROTCOL_H_INCLUDED
+
 #include <stdbool.h>
 #include <stdio.h>
+#include "dm_protocol/message.h"
+#include <sys/socket.h>
 
-
-
-typedef enum comandsList{
+typedef enum commandsList{
   PUT,
   GET,
   LIST,
+  HS,
   COMMANDS_NUM
-}ComandsList;
+}CommandsList;
 
 
 /*
@@ -34,7 +36,7 @@ int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
 */
 
 
-int reciveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
-  socklen_t *sender_addr_len, Message *msg);
+int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
+  socklen_t *sender_addr_len, Message **msg);
 
 #endif

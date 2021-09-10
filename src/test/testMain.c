@@ -75,7 +75,7 @@ int main(){
     // test2();
     // ...
 
-    testRecvMessageGbn();
+    testSendMessageDMProtocol();
 
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 

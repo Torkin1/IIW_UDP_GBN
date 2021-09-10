@@ -10,12 +10,12 @@
 
 Message *newMessage(){
   Message *message = calloc(1, sizeof(Message));
-  message -> header = calloc(1, sizeof(Header));
+  message -> message_header = calloc(1, sizeof(MessageHeader));
 }
 
 void destroyMessage(Message *self){
   free(self -> payload);
-  free(self -> header);
+  free(self -> message_header);
   free(self);
 }
 
@@ -25,28 +25,29 @@ int calcMsgHeaderSize(){
 }
 
 int calcMessageSize(Message *msg){
-  return calcMsgHeaderSize() + (msg ->header ->payload_lentgh);
+  return calcMsgHeaderSize() + (msg ->message_header ->payload_lentgh);
+
 }
 uint8_t *serializeMessage(Message *msg){
   void *serialized = calloc(calcMessageSize(msg), sizeof(uint8_t));
   uint8_t *currentByte = serialized;
 
-  //Serializing the message's header
-  memcpy(currentByte, &(msg ->header ->commands), sizeof(int));
+  //Serializing the message's message_header
+  memcpy(currentByte, &(msg ->message_header ->commands), sizeof(int));
   currentByte += sizeof(int);
-  memcpy(currentByte, &(msg ->header ->status), sizeof(int));
+  memcpy(currentByte, &(msg ->message_header ->status), sizeof(int));
   currentByte += sizeof(int);
-  memcpy(currentByte, &(msg ->header ->payload_lentgh), sizeof(int));
+  memcpy(currentByte, &(msg ->message_header ->payload_lentgh), sizeof(int));
   currentByte += sizeof(int);
-  memcpy(currentByte, &(msg -> header -> more), sizeof(bool));
+  memcpy(currentByte, &(msg -> message_header -> more), sizeof(bool));
   currentByte += sizeof(bool);
 
   //serisalizng the messages payload
-  if(msg ->header ->payload_lentgh !=0){
-    memcpy(currentByte, msg ->payload, msg ->header ->payload_lentgh);
+  if(msg ->message_header ->payload_lentgh !=0){
+    memcpy(currentByte, msg ->payload, msg ->message_header ->payload_lentgh);
   }
 
-return serialized;
+  return serialized;
 
 }
 
@@ -54,19 +55,20 @@ Message *deserializeMessage(uint8_t *bytes){
   Message *deserialized = newMessage();
   uint8_t *currentByte = bytes;
 
-  //Deserializing member of Header structure
-  memcpy(&(deserialized ->header ->commands), currentByte, sizeof(int));
+  //Deserializing member of MessageHeader structure
+  memcpy(&(deserialized ->message_header ->commands), currentByte, sizeof(int));
   currentByte +=sizeof(int);
-  memcpy(&(deserialized ->header ->status), currentByte, sizeof(int));
+  memcpy(&(deserialized ->message_header ->status), currentByte, sizeof(int));
   currentByte +=sizeof(int);
-  memcpy(&(deserialized ->header ->payload_lentgh), currentByte, sizeof(int));
+  memcpy(&(deserialized ->message_header ->payload_lentgh), currentByte, sizeof(int));
   currentByte +=sizeof(int);
-  memcpy(&(deserialized ->header ->more), currentByte, sizeof(bool));
+  memcpy(&(deserialized ->message_header ->more), currentByte, sizeof(bool));
   currentByte += sizeof(bool);
 
 //Deserialized data are store in a buffer allocated dynamically
-  if(deserialized -> header -> payload_lentgh != 0){
-    deserialized -> payload = calloc(deserialized -> header ->payload_lentgh, sizeof(uint8_t));
-    memcpy(deserialized ->payload, currentByte, deserialized -> header ->payload_lentgh);
+  if(deserialized -> message_header -> payload_lentgh != 0){
+    deserialized -> payload = calloc(deserialized -> message_header ->payload_lentgh, sizeof(uint8_t));
+    memcpy(deserialized ->payload, currentByte, deserialized -> message_header ->payload_lentgh);
   }
+  return deserialized;
 }
