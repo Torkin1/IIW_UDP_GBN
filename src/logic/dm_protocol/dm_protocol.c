@@ -14,10 +14,11 @@ int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
 
 int reciveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   socklen_t *sender_addr_len, Message *msg){
-    deserializeMessage(msg);
-    int message_size = calcMessageSize(msg);
+    int message_size;
     recvMessageGbn(socket, sender_addr, sender_addr_len, *msg,
        message_size);
+    deserializeMessage(msg);
+
     logMsg(D, "reciveMessageDMProtocol: done\n");
 
   }
