@@ -1,121 +1,129 @@
-#include<stdio.h>
-#include<string.h>	//strlen
-#include<stdlib.h>	//strlen
-#include<sys/socket.h>
-#include<arpa/inet.h>	//inet_addr
-#include<unistd.h>	//write
-#include<pthread.h> //per il multi-threading, aggiungere  "-lpthread" per farlo funzionare
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <arpa/inet.h>
+#include "logger/logger.h"
 
-#define SERVER_MSG_DIM 2000
-#define SERVER_PORT_NUMBER 8888
+#define SIZE 1024
 
-//La funzione del handler (cioè thread)
-void *connection_handler(void *);
+//Funzione chiamata per la scrittura del file, da sosstituire con una per la lettura di comandi
+void write_file(int sockfd, struct sockaddr_in addr){//la struct è quella del client
+  FILE *fp;
+  char *filename = "panda_server";
+  int n;
+  char buffer[SIZE];
+  socklen_t addr_size;
 
-//Inizio main
-int main(int argc , char *argv[])
-{
-	int socket_desc , client_sock , c , *new_sock;//variabili per la creazione delle socket
-	struct sockaddr_in server , client;//Struttura di una socket (possibile castarla a sockaddr senza
-	//problemi). Qui fatta sia per client che server.
+  // Creazione file
+  fp = fopen(filename, "w");
 
-	//Crea la socket
-	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-	if (socket_desc == -1)//controllo se la creazione non è andata a buon fine
-		printf("ERRORE: IMPOSSIBILE creare la socket");
-	//Se va a buon fine uso puts così va a capo direttamente.
-	puts("Socket createa con successo");
+  // Ricevendo i dati e scrivedoli su file
+  while(1){
 
-	//Compilo i campi della struct di sockaddr_in del server
-	server.sin_family = AF_INET; //usiamo indirizzi ipv4
-	server.sin_addr.s_addr = INADDR_ANY;//con INADDR_ANY farò si che la socket si leghi
-	//a una porta libera a caso, con l'indirizzo definito in INADDR_ANY
-	server.sin_port = htons(SERVER_PORT_NUMBER);//assegno la porta 8888 e lo faccio sfruttando htons per
-	//evitare possibili errori di lettura, in base all'ordine, così ognuno lo leggerà a moodo suo.
+    addr_size = sizeof(addr);
+    n = recvMessageGbn(sockfd, buffer, SIZE, 0, (struct sockaddr*)&addr, &addr_size);
 
-	//Bind della socket con dimensione di server
-	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-	{
-		//In caso di errore
-		perror("Il bind ha fallito, riprova");
-		return 1;
-	}
-	puts("bind completato");
+/*
+int size;
 
-	//Listen, ascolta se ci sono richieste in corso
-	listen(socket_desc , 3);
+Seriliazzo come?
+ho io lenght del msg
+status = --
 
-	//Accetta connesioni possiibli
-	puts("Sono il server, ed attendo connesioni...");
-	c = sizeof(struct sockaddr_in);
-	//loop per ascoltare sempre se ci sono nuovi clinet a connettersi
-	while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
-	{//se un client si è connesso, verrà riferita la connessione
-		puts("connessione accettata");
+uint_8 buf = serializeMSG(msg);
+buf lo passo a SendMessageGbn, che si prende m, che m è la sua lunghezza
 
-		pthread_t listener_thread;//creo un listener
-		new_sock = malloc(1); //nuova socket alloc 1 byte di memoria
-		*new_sock = client_sock; //la nuova socket la assegno come quella del client
-		if( pthread_create( &listener_thread , NULL ,  connection_handler , (void*) new_sock) < 0)//credo un
-		{//nuovo thread e come routine dovrà svolgere connection_handler() con argomento new_sock
-			perror("ERRORE: IMPOSSIBILE creare il thread");
-			return 1;
-		}
+Deserializzo, la prendo da SendMessageGbn size, cioè ho una int rcvd sieze e poi
+&rcvdMSG e poi la uso
+*/
+    if (strcmp(buffer, "END") == 0){
+      break;
+      return;
+    }
 
-		puts("Assegnato all'handler");
-	}
+    printf("[RICEVUTO] Data: %s", buffer);
+    fprintf(fp, "%s", buffer);
+    bzero(buffer, SIZE);
 
-	if (client_sock < 0)//controllo se la creazione del socket del client è stato fatto correttamente
-	{
-		perror("l'accept ha fallito");
-		return 1;
-	}
-	pthread_exit(NULL);//uccido il thread
-	return 0;
+  }
+
+  fclose(fp);
+  return;
 }
 
 /*
- *Questo sarà l'handler delle connessioni dei vari client
+GET:
+Client fa l'invito del file con payload grandezza e status non server,
+il server salva il file richiesto dal client, status ok se è andato a buon fine o altri errori  e lo invia al client, e payload_lentgh
+LIST: Non mi serve il payload non mi serve il payload è sempre di tutti i file, lenght è 0,  roba... ricorda (vedere serialize e deserialize #include "packet).")
 */
-void *connection_handler(void *socket_desc)
-{
-	//Salvo il descrittore del socket
-	int sock = *(int*)socket_desc;
-	//Da cambiare quando si inviano file!
-	int read_size;//variabile che verrà usata per salvare la dimensione del messaggio inviato dal client
-	char *message , client_message[SERVER_MSG_DIM]; //salvo come char il puntatore del messaggio e un vettore di
-	//caratteri da 2000.
 
 
-	//Lettura messaggi dal client
-	while( (read_size = recv(sock , client_message , SERVER_MSG_DIM , 0)) > 0 )//limito il messaggio a 2000 bit
-	{
-		//Invio del messaggio ricevuto al client
-		//Una volta ricevuto il messaggio lo rispedisco al client
-		message = client_message;
-		write(sock , message , strlen(message));
-		message = "\nSalve sono il tuo Handler, mi occuperò della tua connesione con il server\n";
-		write(sock , message , strlen(message));
+/*
 
-		message = "Scrivi qualcosa e io la ripeterò, non è incredibile? \n";
-		write(sock , message , strlen(message));
 
-		memset(client_message,'\0',sizeof(client_message));
+typedef enum commands {
+  list,
+  put,
+  get,
+  numero_comandi
+}command
+*/
 
-	}
+/*
 
-	if(read_size == 0)
-	{
-		puts("Client disconnesso");
-		fflush(stdout);
-	}
-	else if(read_size == -1)
-	{
-		perror("recv ha fallito");
-	}
+comando 4 byte (int)
+status 4 byte (int)
+payload ? VARIABILE attributo nuovo, cioè payload_lentgh
+payload_lentgh 4 byte.
+payload
+DA STD INT USO uint8_t buf[]
 
-	//uso la funzioen free sul puntato del descrittore della socket
-	free(socket_desc);
+PUT: Client richede il salvataggio del file in payload sul server, Server salva il file da payload
+su disco e invia status
 
-	return 0;
+*/
+int main(){
+
+  // Scrivo porta e indirizzo ip, stesso del CLIENT!!!
+  char *ip = "127.0.0.1";
+  int port = 8080;
+
+  // Variabili
+  int server_sockfd;
+  struct sockaddr_in server_addr, client_addr;
+  char buffer[SIZE];
+  int e;
+
+  // Creazione della socket, per IPv4, che sia per UDP, su protocollo IP.
+  server_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (server_sockfd < 0){
+    perror("[ERRORE] Impossibile crare la socket");
+    exit(1);
+  }
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = port;
+  server_addr.sin_addr.s_addr = inet_addr(ip);
+
+//Bind tra socket e IP e porta
+  e = bind(server_sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
+  if (e < 0){
+		// logMsg(E, "[ERROR] servers bind: bind faild check the port %d, and ip %d\n", port, ip);
+    exit(1);
+  }
+
+	logMsg(I, "[INIZIO] Start del server UDP\n");
+  printf("[INIZIO] Start del server UDP\n");
+  //TODO qui uso write file per scrivere sul file e ricevere il file
+  write_file(server_sockfd, client_addr);
+
+  printf("[SUCCESSO] Trasferimento completato.\n");
+  printf("[CHIUSURA] Chiusura server in corso...\n");
+
+  close(server_sockfd);
+
+  return 0;
 }
+//strerror
+// logMsg(D, "packetize: max data len is %d\n", calcMaxDataLen());

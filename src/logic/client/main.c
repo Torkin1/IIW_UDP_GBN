@@ -1,68 +1,81 @@
-#include <stdio.h>	//printf
-#include <string.h>	//strlen
-#include <sys/socket.h>	//socket
-#include <arpa/inet.h>	//inet_addr
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include "../logger/logger.h"
 
-#define SERVER_MSG_DIM 2000
-#define CLIENT_MSG_DIM 1000
-#define SERVER_PORT_NUMBER 8888
 
-/*Inizio main*/
-int main(int argc , char *argv[])
-{
-	int sock;//var di socket
-	struct sockaddr_in server; //la struct della socket del server
-	char message[CLIENT_MSG_DIM] , server_reply[SERVER_MSG_DIM];//var con messaggio di client e server, da togliere quando combinate
-	memset(server_reply, 0, SERVER_MSG_DIM);
+#define SIZE 1024 //un generico buffersieze
 
-	//Creo la socket
-	sock = socket(AF_INET , SOCK_STREAM , 0);
-	if (sock == -1) //controollo creazione corretta socket
-	{
-		printf("ERRORE: IMPOSSIBILE creare la socket");
-	}
-	puts("Socket creata con successo");//puts invece di printf per poter andare a campo in automatico
+ int main(){
 
-	//Completo la struct della socket del server
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_family = AF_INET;
-	server.sin_port = htons(SERVER_PORT_NUMBER);
+  // Scrivo ip e porta, stessa tra server e client
+  char *ip = "127.0.0.1";
+  int port = 8080;
 
-	//Tenta di connettersi al server
-	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
-	{
-		perror("ERRORE: Connessione fallita");//In caso di errore di connessione (Es. server giu')
-		return 1;
-	}
+// Definisco le variabili
+  int server_sockfd; //descrittore del socket
+  struct sockaddr_in server_addr;//struttura socket
+  FILE *fp;//descrittore del file
+  char *filename = "panda";//nome file che creo
+  // Creao la socket UDP, si usano le sock_dgram sempre IPv4, con IP (lo 0 finale)
+    server_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (server_sockfd < 0){
+      perror("[ERRORE] impossibile creare la socket");
+      exit(1);
+    }
+  //struttura della socket
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = port;
+  server_addr.sin_addr.s_addr = inet_addr(ip);
 
-	puts("Connessa\n");
+  // Leggento il ifle client.txt, demo da cancellare TODO
+  fp = fopen(filename, "r");
+  if (fp == NULL){
+      perror("[ERRORE] Impossibile leggere il file");
+      exit(1);
+  }
 
-	//Mantengo la connessione aperta con il server
-	while(1)
-	{
-		printf("Scrivi il messaggio: ");
-		scanf("%s" , message);
+    // Invio del file al server
+  send_file_data(fp, server_sockfd, server_addr);
 
-		//Invia i dati (in questo caso il messaggio)
-		if( send(sock , message , strlen(message) , 0) < 0)
-		{
-			puts("ERRORE: Invio messaggio fallito");
-			return 1;
-		}
+  //Dei print per chiarezza
+  printf("[SUCCESSO] transferimento dei dati completato.\n");
+  //TODO metterlo in un while e aspettare sempre comandi, tra cui chiusura
+  printf("[Chiusura] Disconnessioen dal server.\n");
 
-		//Uso recv per leggere i messaggi ricevuti da parte del server
-		if( recv(sock , server_reply , SERVER_MSG_DIM , 0) < 0)
-		{
-			puts("ERRORE: recv ha fallito");
-			break;
-		}
+  close(server_sockfd);
+  return 0;
+}
 
-		puts("Risposta del server:");
-		puts(server_reply);
+//Invio di un file, con fp cioè descrittore del file, socketfd è la scoket e la
+//sua struttura, del client
+void send_file_data(FILE *fp, int sockfd, struct sockaddr_in addr){
+  //variabili locali
+  int n;
+  char buffer[SIZE];
 
-	}
+  // Invio dati
+  while(fgets(buffer, SIZE, fp) != NULL){//leggo il file con un while
+      printf("[INVIO] Data: %s", buffer);//stampo cosa leggo
+      logMsg(I, "[INVIO] Data: %s\n", index);
 
-	close(sock);//chiudo la socket
-	return 0;
+
+      //Invio i dati con sendto
+      n = sendto(sockfd, buffer, SIZE, 0, (struct sockaddr*)&addr, sizeof(addr));
+      if (n == -1){
+        perror("[ERRORE] impossibile inviare dato al server.");
+        exit(1);
+      }
+      bzero(buffer, SIZE);//azzero il buffer
+
+    }
+
+    // Invio dell'"END" per poter definire la fine del file, fare così o meglio
+    //come se fosse un comando la prossima volta, preso da input del client
+    strcpy(buffer, "END");
+    sendto(sockfd, buffer, SIZE, 0, (struct sockaddr*)&addr, sizeof(addr));
+    fclose(fp);
+    return;
 }
