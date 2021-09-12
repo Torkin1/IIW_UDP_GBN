@@ -33,7 +33,7 @@ uint8_t *serializeMessage(Message *msg){
   uint8_t *currentByte = serialized;
 
   //Serializing the message's message_header
-  memcpy(currentByte, &(msg ->message_header ->commands), sizeof(int));
+  memcpy(currentByte, &(msg ->message_header ->command), sizeof(int));
   currentByte += sizeof(int);
   memcpy(currentByte, &(msg ->message_header ->status), sizeof(int));
   currentByte += sizeof(int);
@@ -56,7 +56,7 @@ Message *deserializeMessage(uint8_t *bytes){
   uint8_t *currentByte = bytes;
 
   //Deserializing member of MessageHeader structure
-  memcpy(&(deserialized ->message_header ->commands), currentByte, sizeof(int));
+  memcpy(&(deserialized ->message_header ->command), currentByte, sizeof(int));
   currentByte +=sizeof(int);
   memcpy(&(deserialized ->message_header ->status), currentByte, sizeof(int));
   currentByte +=sizeof(int);

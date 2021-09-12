@@ -6,13 +6,35 @@
 #include "dm_protocol/message.h"
 #include <sys/socket.h>
 
-typedef enum commandsList{
+// all operations that server and client must support
+typedef enum dmProtocol_command{
+  
+  /*  Client sets payload with file data and requests server to store it.
+      Server responds with status OK if the file is stored successfully, else sets status with an error code and payload with an error message.
+  */
   PUT,
+  
+  /*  Client requests server to send file with the name specified in payload.
+      Server responds with status OK and requested file in payload if it exists, else sets status with an error code and sets payload with an error message.
+  */
   GET,
+  
+  /*  Client requests server to send file list of files currently stored in server, with the file names separated with the character specified in payload.
+      Server responds with status OK and fileList string in payload.
+  */                
+  
+  /*  Client requests server to send file list of files currently stored in server, with the file names separated with the character specified in payload.
+      Server responds with status OK and fileList string in payload.
+  */
   LIST,
+
+  /*  Client requests server to allocate resources to handle one client request.
+      Server responds with status OK and the port number where the client has to send its request in payload if it succesfully allocated resources to handle the client request, else sets status with an error code and payload with an error message.
+  */               
   HS,
+
   COMMANDS_NUM
-}CommandsList;
+}DmProtocol_command;
 
 
 /*
@@ -34,8 +56,6 @@ int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
   @param msg pointer to message to send
   @return 0 if success, else -1
 */
-
-
 int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   socklen_t *sender_addr_len, Message **msg);
 
