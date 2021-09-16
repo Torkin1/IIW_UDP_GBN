@@ -2,18 +2,17 @@
 #include "logger/logger.h"
 #include <stdbool.h>
 #include <sys/socket.h>
-
-#define DEFAULT_PORT 8888;
+#include "gbn/gbn.h"
 
 int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
-  socklen_t *dest_addr_size, Message *msg ){
+  socklen_t dest_addr_size, Message *msg ){
 
     int message_size = calcMessageSize(msg);
 
-    Message  *message = serializeMessage(msg);
-    sendMessageGbn(socket, dest_addr, dest_addr_size, message,
+    uint8_t  *buf = serializeMessage(msg);
+    sendMessageGbn(socket, dest_addr, dest_addr_size, buf,
       message_size, NULL);
-    logMsg(D, "sendMessageDMProtocol: done\n");
+    return 0;
   }
 
 
@@ -27,7 +26,7 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
        &message_size);
     newMessage = deserializeMessage(message_buff);
     *msg = newMessage;
-
-    logMsg(D, "reciveMessageDMProtocol: done\n");
+    return 0;
 
   }
+

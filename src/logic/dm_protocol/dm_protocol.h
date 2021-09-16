@@ -6,8 +6,17 @@
 #include "dm_protocol/message.h"
 #include <sys/socket.h>
 
+// default port where the server will listen for handshakes
+#define DEFAULT_SERVER_PORT 8888
+
 // all operations that server and client must support
 typedef enum dmProtocol_command{
+  
+  /*
+    Newly created messages are initialized with 0 as the command value.
+    Command should be explicitely choosed by the requester, else an implicit and potentially wrong command code could be sent.
+  */
+  UNSPECIFIED = 0,
   
   /*  Client sets payload with file data and requests server to store it.
       Server responds with status OK if the file is stored successfully, else sets status with an error code and payload with an error message.
@@ -36,6 +45,16 @@ typedef enum dmProtocol_command{
   COMMANDS_NUM
 }DmProtocol_command;
 
+typedef enum hsStatuses{
+
+  /*
+    Server is ready to handle client request.
+    Payload has been set with the port number that the server will use to listen for client messages 
+  */
+  HS_OK         
+
+} HsStatuses;
+
 
 /*
   divides a message into an array and sendend to the sendMessageGbn
@@ -46,17 +65,19 @@ typedef enum dmProtocol_command{
   @return 0 if success, else -1
 */
 int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
-  socklen_t *dest_addr_size, Message *msg );
+  socklen_t dest_addr_size, Message *msg );
 
 /*
   returns if we recived a message this is called
   @param sd socket used to listen packets. Must be already bound
   @param senderAddr if not NULL, sender addr will be copied on *senderAddr
   @param senderAddrlen if not NULL, sender addr len is stored on *sender_addr_len
-  @param msg pointer to message to send
+  @param msg a pointer to a Message object populated with received data will be stored in *msg
   @return 0 if success, else -1
 */
 int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   socklen_t *sender_addr_len, Message **msg);
+
+
 
 #endif

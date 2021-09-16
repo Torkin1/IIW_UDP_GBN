@@ -28,6 +28,8 @@ void testSendMessageGbnMultipleSends();
 void testRecvMessageGbn();
 void testRecvMessageGbnFirstPacketOutOfOrder();
 void testTimerConst();
-void testSendMessageDMProtocol();
+void testSendMessageDMProtocol();   // FIXME: missing implementation
+void testDoHandShakeClient();
+void testDoHandshakeServer();
 
 #endif // TESTSUITES_H_INCLUDED

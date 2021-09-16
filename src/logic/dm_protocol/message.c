@@ -11,6 +11,7 @@
 Message *newMessage(){
   Message *message = calloc(1, sizeof(Message));
   message -> message_header = calloc(1, sizeof(MessageHeader));
+  return message;
 }
 
 void destroyMessage(Message *self){
