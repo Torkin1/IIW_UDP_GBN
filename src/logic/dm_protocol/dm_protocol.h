@@ -8,6 +8,7 @@
 
 // default port where the server will listen for handshakes
 #define DEFAULT_SERVER_PORT 8888
+#define DEFAULT_SERVER_ADDR INADDR_LOOPBACK
 
 // all operations that server and client must support
 typedef enum dmProtocol_command{

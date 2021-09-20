@@ -25,7 +25,7 @@ HashTable *newHashTable();
 // Returns value paired with given key if present in table, NULL otherwise
 char* getValueFromHashTable(HashTable *self, void* key, int keyLen);
 
-// Adds given pair key-value
+// Adds given pair key-value. Both key and value must be dynamically allocated
 void addToHashTable(HashTable *self, void *key, int keyLen, void *value);
 
 // Frees resources associated with HashTable object

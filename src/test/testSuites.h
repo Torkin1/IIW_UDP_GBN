@@ -31,5 +31,6 @@ void testTimerConst();
 void testSendMessageDMProtocol();   // FIXME: missing implementation
 void testDoHandShakeClient();
 void testDoHandshakeServer();
+void testParseCommandName();
 
 #endif // TESTSUITES_H_INCLUDED
