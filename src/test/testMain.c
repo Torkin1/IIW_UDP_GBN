@@ -75,7 +75,8 @@ int main(){
     // test2();
     // ...
 
-    testParseCommandName();
+    testDoListClient();
+    //testDoListServer();
     
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 

@@ -11,7 +11,7 @@ const char* getStringFromTag(enum Tag tag){
 
 void logMsg(enum Tag tag, const char* format, ...){
 
-    if (tag <= LOG_LEVEL && format != NULL){
+    if ((int)tag <= LOG_LEVEL && format != NULL){
         char buf[MSG_MAX_LEN];
         int firstHalfLen;
         va_list ap;

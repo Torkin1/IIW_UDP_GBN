@@ -258,7 +258,7 @@ void launcherSigHandler(int sig, siginfo_t *siginfo, void *ucontext)
         pthread_mutex_unlock(&sendWindowLock);
         pthread_mutex_unlock(&launchBatteryLock);
 
-        // restarts timer
+        // sets off timer if no packet has been retransmitted
         if (launches == 0 && getTimerReference()->isAlive)
         {
             timeout(getTimerReference(), AT_TIMEOUT_SHUTDOWN);

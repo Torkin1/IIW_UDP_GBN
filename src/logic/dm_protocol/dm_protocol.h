@@ -56,6 +56,16 @@ typedef enum hsStatuses{
 
 } HsStatuses;
 
+typedef enum listStatuses{
+
+  /*
+    Server created list of files stored on it
+    Payload has been set with a string containing such filelist.
+  */
+  LIST_OK
+
+} ListStatuses;
+
 
 /*
   divides a message into an array and sendend to the sendMessageGbn

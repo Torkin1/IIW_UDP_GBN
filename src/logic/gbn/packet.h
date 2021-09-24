@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 
 // max size of an IPv4 packet
-#define MTU 25 // default: 1500. Set to calcAckSize() + 1 if you want 1 byte as max data len (currently 25)
+#define MTU 1500 // average max value before data are divided in more MTUs: 1500. Set to calcAckSize() + 1 if you want 1 byte as max data len (currently 25)
 
 // Packet metadata. Caution is needed when changing this structure because of serialization rules. Remember to update implementation accordingly
 typedef struct header {
