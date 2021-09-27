@@ -134,7 +134,7 @@ int doHandShake(int sd, struct sockaddr *serverAddr, socklen_t addrlen, struct s
 		}
 	} while (hsResponse->message_header->command != HS);	// keeps listening until an handshake response arrives
 
-	if (hsResponse ->message_header ->status != HS_OK){
+	if (hsResponse ->message_header ->status != OP_STATUS_OK){
 		logMsg(E, "doHandShake: server responded with error %d: %s\n", &(hsResponse ->message_header ->status), hsResponse ->payload);
 		destroyMessage(hsResponse);
 		return -1;
@@ -184,7 +184,7 @@ int doList(){
     logMsg(D, "doList: request received\n");
 
     // prints filelist if OK, else handles the error
-    if (response -> message_header ->status != LIST_OK){
+    if (response -> message_header ->status != OP_STATUS_OK){
         logMsg(E, "doList: server couldn't perform the operation");
         return -1;
     }

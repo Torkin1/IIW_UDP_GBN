@@ -46,25 +46,12 @@ typedef enum dmProtocol_command{
   COMMANDS_NUM
 }DmProtocol_command;
 
-typedef enum hsStatuses{
+// code defining status of operation after it was performed on server.
+typedef enum opStatus{
 
-  /*
-    Server is ready to handle client request.
-    Payload has been set with the port number that the server will use to listen for client messages 
-  */
-  HS_OK         
+  OP_STATUS_OK          // Operation was performed succesfully
 
-} HsStatuses;
-
-typedef enum listStatuses{
-
-  /*
-    Server created list of files stored on it
-    Payload has been set with a string containing such filelist.
-  */
-  LIST_OK
-
-} ListStatuses;
+} OpStatus;
 
 
 /*
