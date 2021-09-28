@@ -29,7 +29,7 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
     // registers the message in the send table
     SortingEntry *sendEntry = newSortingEntry();
     sendEntry ->sd = sd;
-    sendEntry ->addr = dest_addr;
+    memcpy(&(sendEntry ->addr), dest_addr, addrlen);
     sendEntry ->addrlen = addrlen;
     sendEntry ->errorHandler = (void (*)(int)) errorHandler;
     pthread_mutex_lock(&sendTableLock);

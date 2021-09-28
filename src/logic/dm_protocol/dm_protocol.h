@@ -28,11 +28,7 @@ typedef enum dmProtocol_command{
       Server responds with status OK and requested file in payload if it exists, else sets status with an error code and sets payload with an error message.
   */
   GET,
-  
-  /*  Client requests server to send file list of files currently stored in server, with the file names separated with the character specified in payload.
-      Server responds with status OK and fileList string in payload.
-  */                
-  
+    
   /*  Client requests server to send file list of files currently stored in server, with the file names separated with the character specified in payload.
       Server responds with status OK and fileList string in payload.
   */

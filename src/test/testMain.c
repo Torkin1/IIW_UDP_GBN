@@ -75,8 +75,8 @@ int main(){
     // test2();
     // ...
 
-    testSendRecvFile();
-    //testRecvFile();
+    //testSendRecvFile();
+    testRecvFile();
     
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 

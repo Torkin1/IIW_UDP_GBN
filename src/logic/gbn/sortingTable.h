@@ -9,7 +9,7 @@
 typedef struct sortingEntry{
 
     int sd;                                         // socket descriptor that will be used by sendto and recvfrom    
-    struct sockaddr *addr;                          // destination or sender address
+    struct sockaddr addr;                          // destination or sender address
     socklen_t addrlen;                              // address length
     void (*errorHandler)(int errValue);             // function called on a new thread if the send or receive of a message failed
 

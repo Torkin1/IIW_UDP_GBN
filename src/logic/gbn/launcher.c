@@ -115,7 +115,7 @@ int fireLaunchPad(LaunchPad *currentPad)
     {
         // sends serialized packet
         // TODO: measure time needed for send to successfully return and update the upload time with that value.    
-        if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, currentSendEntry ->addr, currentSendEntry ->addrlen)) < 0)
+        if ((err = sendto(currentSendEntry ->sd, sendbuf, sendbufSize, MSG_NOSIGNAL, &(currentSendEntry ->addr), currentSendEntry ->addrlen)) < 0)
         {
 
             err = errno;

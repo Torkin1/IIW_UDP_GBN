@@ -53,7 +53,6 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
     lseek(fileD, 0, SEEK_SET);
     do
     {
-      memset(chunk, EOF, MAX_FILE_CHUNK_SIZE);
       if ((bytesRead = read(fileD, chunk, MAX_FILE_CHUNK_SIZE)) < 0)
       {
         int err = errno;
@@ -94,8 +93,8 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   {
 
     Message *rcvd, *chunkHasArrivedMsg;
-    struct sockaddr_in *sendAddr = calloc(1, sizeof(struct sockaddr_in));
-    socklen_t *senderAddrSize = calloc(1, sizeof(socklen_t));
+    struct sockaddr_in sendAddr = {0};
+    socklen_t senderAddrSize;
     int fileD;
     bool more;
 
@@ -113,7 +112,7 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
     do
     {
 
-      while (receiveMessageDMProtocol(socket, sendAddr, senderAddrSize, &rcvd) < 0)
+      while (receiveMessageDMProtocol(socket, &sendAddr, &senderAddrSize, &rcvd) < 0)
       {
         logMsg(E, "receiveFileDMProtocol: failed to receive message, resuming listening");
       }
@@ -126,7 +125,7 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
     
         chunkHasArrivedMsg = newMessage();
         chunkHasArrivedMsg ->message_header ->status = OP_STATUS_OK;
-        while(sendMessageDMProtocol(socket, sendAddr, *senderAddrSize, chunkHasArrivedMsg) < 0){
+        while(sendMessageDMProtocol(socket, &sendAddr, senderAddrSize, chunkHasArrivedMsg) < 0){
           logMsg(E, "receiveFileDMProtocol: an error occurred while trying to inform sender that a chunk has been processed, retrying in %d secs ...\n", WAIT_SECS_BEFORE_RETRY);
           sleep(WAIT_SECS_BEFORE_RETRY);
         }
