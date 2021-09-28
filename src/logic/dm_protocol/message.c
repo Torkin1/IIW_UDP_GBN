@@ -15,7 +15,6 @@ Message *newMessage(){
 }
 
 void destroyMessage(Message *self){
-  free(self -> payload);
   free(self -> message_header);
   free(self);
 }

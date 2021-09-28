@@ -2,7 +2,7 @@
 #define LOGGER_H_INCLUDED
 
 #define MSG_MAX_LEN 1024
-#define LOG_LEVEL 0  // Only messages with a Tag <= LOG_LEVEL will be displayed
+#define LOG_LEVEL 3  // Only messages with a Tag <= LOG_LEVEL will be displayed
 
 enum Tag {
 

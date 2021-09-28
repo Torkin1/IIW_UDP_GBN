@@ -77,5 +77,24 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   socklen_t *sender_addr_len, Message **msg);
 
 
+/**
+ * Sends a file to a internet address using dm protocol.
+ * @param socket sending socket descriptor
+ * @param dest_addr pointer to dest address struct
+ * @param dest_addr_size size of *dest_addr
+ * @param pathName path of file to send
+ * @return 0 if success, else -1
+*/
+int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_addr_size, char *pathName);
+
+/**
+ * Receives an incoming file.
+ * @param socket listening socket descriptor
+ * @param dest_addr if not NULL, sender addr is stored in *dest_addr
+ * @param dest_addr_size if not NULL, size of sender addr is stored in *dest_addr_size
+ * @param filePath path where the received file will be stored
+ * @return 0 if success, else -1
+*/
+int receiveFileDMProtocol(int socket, struct sockaddr *sender_addr, socklen_t *send_addr_size, char *filePath);
 
 #endif

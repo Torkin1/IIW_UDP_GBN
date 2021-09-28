@@ -33,5 +33,7 @@ void testDoHandShakeClient();
 void testDoHandshakeServer();
 void testParseCommandName();
 void testDoListClient();
+void testSendRecvFile();
+void testRecvFile();
 
 #endif // TESTSUITES_H_INCLUDED
