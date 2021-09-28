@@ -9,8 +9,6 @@
 
 void testSendRecvFile(){
 
-    //FIXME: ordine dei messaggi non è rispettato, se arrivano messaggi fuori ordine quelli vecchi sono scartati
-    
     const char *expected = "CIAO A TUTTI";
     const char *TEST_FILE_NAME = "test";
     char actual[1024] = {0};
@@ -21,7 +19,6 @@ void testSendRecvFile(){
     
     fd = open(TEST_FILE_NAME, O_CREAT | O_APPEND | O_TRUNC | O_RDWR);
     write(fd, expected, strlen(expected));
-    close(fd);
     
     logMsg(I, "expected output written in file\n");
 
@@ -32,8 +29,9 @@ void testSendRecvFile(){
     sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
     logMsg(D, "BURP!\n");
-    sendFileDMProtocol(sd, (struct sockaddr *) &destAddr, sizeof (struct sockaddr_in), TEST_FILE_NAME);
-    logMsg(I, "requested to send file\n");
+    sendFileDMProtocol(sd, (struct sockaddr *) &destAddr, sizeof (struct sockaddr_in), fd);
+    close(fd);
+    logMsg(I, "file sent\n");
     fdRcvd = open("testRcvd", O_RDONLY | O_NONBLOCK);
     lseek(fdRcvd, 0, SEEK_SET);
     read(fdRcvd, actual, strlen(expected));

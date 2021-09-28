@@ -19,13 +19,16 @@ typedef enum dmProtocol_command{
   */
   UNSPECIFIED = 0,
   
-  /*  Client sets payload with file data and requests server to store it.
-      Server responds with status OK if the file is stored successfully, else sets status with an error code and payload with an error message.
+  /*  Client sets payload with name of file to send, then listens for server response.
+      Server responds with status OK if it can store the file successfully, else sets status with an error code and payload with an error message. Then it listens for incoming file data.
+      Client sends file data to server, then listens for server response.
+      Server responds with status OK if file was stored successfully, else sets status with an error code and payload with an error message.
   */
   PUT,
   
-  /*  Client requests server to send file with the name specified in payload.
-      Server responds with status OK and requested file in payload if it exists, else sets status with an error code and sets payload with an error message.
+  /*  Client requests server to send file with the name specified in payload, then listens for server response.
+      Server responds with status OK if file exists and it proceeds to send file data, else sets status with an error code and sets payload with an error message. 
+
   */
   GET,
     
@@ -45,7 +48,8 @@ typedef enum dmProtocol_command{
 // code defining status of operation after it was performed on server.
 typedef enum opStatus{
 
-  OP_STATUS_OK          // Operation was performed succesfully
+  OP_STATUS_OK,             // Operation was performed succesfully
+  OP_STATUS_E = -1,         // Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
 
 } OpStatus;
 
@@ -72,16 +76,15 @@ int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
 int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
   socklen_t *sender_addr_len, Message **msg);
 
-
 /**
  * Sends a file to a internet address using dm protocol.
  * @param socket sending socket descriptor
  * @param dest_addr pointer to dest address struct
  * @param dest_addr_size size of *dest_addr
  * @param pathName path of file to send
- * @return 0 if success, else -1
+ * @return status of operation. See OpStatus definition
 */
-int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_addr_size, char *pathName);
+int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_addr_size, int fileD);
 
 /**
  * Receives an incoming file.
@@ -89,8 +92,8 @@ int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_ad
  * @param dest_addr if not NULL, sender addr is stored in *dest_addr
  * @param dest_addr_size if not NULL, size of sender addr is stored in *dest_addr_size
  * @param filePath path where the received file will be stored
- * @return 0 if success, else -1
+ * @return status of operation. See OpStatus definition
 */
-int receiveFileDMProtocol(int socket, struct sockaddr *sender_addr, socklen_t *send_addr_size, char *filePath);
+int receiveFileDMProtocol(int socket, struct sockaddr *sender_addr, socklen_t *send_addr_size, int fileD);
 
 #endif
