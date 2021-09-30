@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "dm_protocol/message.h"
 #include <sys/socket.h>
+#include <limits.h>
 
 // default port where the server will listen for handshakes
 #define DEFAULT_SERVER_PORT 8888
@@ -47,9 +48,10 @@ typedef enum dmProtocol_command{
 
 // code defining status of operation after it was performed on server.
 typedef enum opStatus{
-
-  OP_STATUS_OK,             // Operation was performed succesfully
-  OP_STATUS_E = -1,         // Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
+  
+  OP_STATUS_E = -INT_MAX,           // Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
+  OP_STATUS_E_FILE_NOT_FOUND,       // Op failed beacuse a file needed by the operation was not found
+  OP_STATUS_OK = 0,                 // Operation was performed succesfully
 
 } OpStatus;
 
