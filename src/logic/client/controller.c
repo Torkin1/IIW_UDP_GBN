@@ -27,7 +27,7 @@ DmProtocol_command *getCommandByName(char *name){
     if (supportedCommandNames == NULL){
         supportedCommandNames = newHashTable();
         
-        // TODO: populate table with commands using names as key
+        // populate table with commands using names as key
         char *putKey = calloc(strlen("PUT") + 1, sizeof(char));
         strcpy(putKey, "PUT");
         DmProtocol_command *putCommand = calloc(1, sizeof(DmProtocol_command));
