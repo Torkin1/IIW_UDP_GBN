@@ -162,6 +162,11 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
     {
         nextSeqNum += QUEUE_LEN;
     }
+
+    /** TODO: this solves #59
+     * sends a packet only if it has the same msgId of the first packet in send window
+     * */
+    int msgIdToSend; 
     int launches = 0;
     for (int i = base; i < nextSeqNum; i ++)
     {
@@ -170,7 +175,11 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
         {
             if (currentPad -> status == statuses[j])
             {
-                if (fireLaunchPad(currentPad) >= 0){
+                if (i == base && j == 0)
+                {
+                    msgIdToSend = currentPad->packet->header->msgId;
+                }
+                if (currentPad ->packet ->header ->msgId == msgIdToSend && fireLaunchPad(currentPad) >= 0){
                     launches ++;
                 }
                 break;
