@@ -35,5 +35,7 @@ void testParseCommandName();
 void testDoListClient();
 void testSendRecvFile();
 void testRecvFile();
+void testDoGetServer();
+void testDoGetClient();
 
 #endif // TESTSUITES_H_INCLUDED

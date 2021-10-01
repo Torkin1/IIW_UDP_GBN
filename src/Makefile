@@ -13,9 +13,11 @@ OUT_DEBUG_DIR_SERVER=$(OUT_DEBUG_DIR)/server
 OUT_DEBUG_CLIENT=$(OUT_DEBUG_DIR_CLIENT)/client
 OUT_DEBUG_SERVER=$(OUT_DEBUG_DIR_SERVER)/server
 OUT_TEST_DIR=$(EXEC_DIR)/Test
+OUT_TEST_DIR_CLIENT=$(OUT_TEST_DIR)/client
+OUT_TEST_DIR_SERVER=$(OUT_TEST_DIR)/server
 OUT_TEST=$(OUT_TEST_DIR)/$(PROJECT_NAME)_TestCommon
-OUT_TEST_CLIENT=$(OUT_TEST_DIR)/$(PROJECT_NAME)_TestClient
-OUT_TEST_SERVER=$(OUT_TEST_DIR)/$(PROJECT_NAME)_TestServer
+OUT_TEST_CLIENT=$(OUT_TEST_DIR_CLIENT)/$(PROJECT_NAME)_TestClient
+OUT_TEST_SERVER=$(OUT_TEST_DIR_SERVER)/$(PROJECT_NAME)_TestServer
 LOGIC=$(shell find $(LOGIC_DIR) -name "*.c")
 LOGIC_COMMON=$(shell find $(LOGIC_DIR) \( -path $(LOGIC_DIR)/client -o -path $(LOGIC_DIR)/server \) -prune -false -o -name "*.c")
 LOGIC_CLIENT=$(LOGIC_COMMON) $(shell find $(LOGIC_DIR)/client -name "*.c")
@@ -30,11 +32,11 @@ testCommon: $(LOGIC_COMMON) $(TEST_COMMON)
 	$(CC) $(FLAGS) $(INCLUDE) $(DEFINE) $(LOGIC_COMMON) $(TEST_COMMON) -o $(OUT_TEST) $(LIBS)
 
 testClient: $(TEST_CLIENT)
-	mkdir -p $(OUT_TEST_DIR)
+	mkdir -p $(OUT_TEST_DIR_CLIENT)
 	$(CC) $(FLAGS) $(INCLUDE) $(DEFINE) $(TEST_CLIENT) -o $(OUT_TEST_CLIENT) $(LIBS)
 
 testServer: $(TEST_SERVER)
-	mkdir -p $(OUT_TEST_DIR)
+	mkdir -p $(OUT_TEST_DIR_SERVER)
 	$(CC) $(FLAGS) $(INCLUDE) $(DEFINE) $(TEST_SERVER) -o $(OUT_TEST_SERVER) $(LIBS)
 
 testClientAndServer: TestClient TestServer

@@ -75,8 +75,8 @@ int main(){
     // test2();
     // ...
 
-    //testSendRecvFile();
-    testRecvFile();
+    testDoGetClient();
+    //testDoGetServer();
     
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 
