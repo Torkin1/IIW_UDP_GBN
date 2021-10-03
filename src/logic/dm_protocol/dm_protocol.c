@@ -12,7 +12,12 @@
 #include <stdlib.h>
 
 #define WAIT_SECS_BEFORE_RETRY 5      // num of secs to wait before retrying to send chunk  
-#define MAX_FILE_CHUNK_SIZE 10240     // max num of bytes to keep in memory read from a file at a time
+
+/**
+ * Max num of bytes to keep in memory read from a file at a time
+ * FIXME: #61. For now, set it to a size ~10kb, better safe than sorry.
+*/
+#define MAX_FILE_CHUNK_SIZE 10240      
 
 int sendMessageDMProtocol(int socket, struct sockaddr *dest_addr,
   socklen_t dest_addr_size, Message *msg ){
@@ -57,8 +62,7 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
         err = errno;
         logMsg(E, "sendFileDMProtocol: failed to read chunk from file: %s\n", strerror(err));
       }
-      // FIXME: l'invio di diversi chunk comporta diversi bug, tra cui seg faults, arrivo disordinato dei chunks, ...
-      //more = (bytesRead == MAX_FILE_CHUNK_SIZE);
+      more = (bytesRead == MAX_FILE_CHUNK_SIZE);
 
       toSendMsg = newMessage();
       toSendMsg->payload = chunk;
