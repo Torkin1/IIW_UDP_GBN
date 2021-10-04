@@ -267,8 +267,72 @@ int doGet(char *fileName){
         logMsg(E, "doGet: failed to receive file conten from server\n");
         return -1;
     }
-    logMsg(I, "File %s successfully received", fileName);
+    logMsg(I, "File %s successfully received\n", fileName);
 
+    return 0;
+}
+
+int doPut(char *fileName){
+
+    struct sockaddr_in handlerAddr;
+    int fd, err;
+    Message *request, *response;
+    
+    // name must be not NULL
+    if (fileName == NULL){
+        logMsg(E, "doPut: fileName can't be NULL\n");
+        return -1;
+    }
+
+    // does handshake
+    if (doHandShake(getGlobalSocket(), (struct sockaddr *) getServerAddress(), sizeof(*getServerAddress()), &handlerAddr)){
+        logMsg(E, "doPut: handshake failed\n");
+        return -1;
+    }
+
+    // opens file to hold contents sent by server. If already exists, it is overwritten
+    if ((fd = open(fileName, O_RDONLY)) < 0)
+    {
+        err = errno;
+        logMsg(E, "doPut: failed to open file %s: %s\n", fileName, strerror(err));
+        return -1;
+    }
+
+    // requests PUT to assigned address and listens for response
+    request = newMessage();
+    request ->message_header ->command = PUT;
+    request ->message_header ->payload_lentgh = strlen(fileName) + 1;
+    request ->payload = fileName;
+    if (sendMessageDMProtocol(getGlobalSocket(), (struct sockaddr *) &handlerAddr, sizeof(handlerAddr), request)){
+        logMsg(E, "doPut: failed to send message\n");
+        destroyMessage(request);
+        close(fd);
+        return -1;
+    }
+    destroyMessage(request);
+    while (receiveMessageDMProtocol(getGlobalSocket(), NULL, NULL, &response) || response->message_header->command != PUT)
+    {
+        logMsg(E, "doPut: an error occurred while listening for server response, or received a response for a different command than expected. Still listening ...\n");
+    }
+    
+    // if PUT response was successful, we send the file
+    if (response->message_header->status != OP_STATUS_OK)
+    {
+        logMsg(E, "doPut: server reponded with error %d: %s\n", response->message_header->status, response->payload);
+        destroyMessage(response);
+        close(fd);
+        return -1;
+    }
+    destroyMessage(response);
+    if (sendFileDMProtocol(getGlobalSocket(), (struct sockaddr *) &handlerAddr, sizeof(handlerAddr), fd) < 0){
+        logMsg(E, "doPut: failed to send file\n");
+        close(fd);
+        return -1;
+    }
+
+    logMsg(I, "File successfully sent to server\n");
+
+    close(fd);
     return 0;
 }
 
@@ -278,8 +342,8 @@ int doCommand(DmProtocol_command toInvoke, char *toInvokeArgs[]){
 		
 		case PUT: 
             
-			// TODO: return invokePut
-			break;
+			return doPut(toInvokeArgs[0]);
+            break;
 
         case GET:
             
@@ -292,7 +356,7 @@ int doCommand(DmProtocol_command toInvoke, char *toInvokeArgs[]){
 			break;
 
         default:
-		logMsg(E, "%s: unsupported operation with code: %d\n", toInvoke);
+		logMsg(E, "%s: doCommand: unsupported operation with code: %d\n", toInvoke);
 		return -1;
     }
 

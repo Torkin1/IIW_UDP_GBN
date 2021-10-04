@@ -37,5 +37,7 @@ void testSendRecvFile();
 void testRecvFile();
 void testDoGetServer();
 void testDoGetClient();
+void testDoPutClient();
+void testDoPutServer();
 
 #endif // TESTSUITES_H_INCLUDED

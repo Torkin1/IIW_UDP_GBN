@@ -75,9 +75,6 @@ int main(){
     // test2();
     // ...
 
-    testDoGetClient();
-    //testDoGetServer();
-    
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 
     return EXIT_SUCCESS;

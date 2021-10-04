@@ -20,10 +20,9 @@ typedef enum dmProtocol_command{
   */
   UNSPECIFIED = 0,
   
-  /*  Client sets payload with name of file to send, then listens for server response.
+  /*  Client sets payload with name of file to send.
       Server responds with status OK if it can store the file successfully, else sets status with an error code and payload with an error message. Then it listens for incoming file data.
-      Client sends file data to server, then listens for server response.
-      Server responds with status OK if file was stored successfully, else sets status with an error code and payload with an error message.
+      Client sends file data to server.
   */
   PUT,
   
