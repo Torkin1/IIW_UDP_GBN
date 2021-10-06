@@ -27,4 +27,7 @@ int popLL(Node **headAddr, int index, char **destination);
 // Returns leńgth of list
 int lenLL(Node *current);
 
+// stores in *node a pointer to node in head corresponding to given index
+int getLL(Node *head, int index, Node **node)
+
 #endif // LL_H_INCLUDED

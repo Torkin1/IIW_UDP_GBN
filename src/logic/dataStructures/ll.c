@@ -65,6 +65,25 @@ void appendLL(Node **currentAddr, char *value){
 	}
 }
 
+int getLL(Node *head, int index, Node **node){
+
+	Node *current = head;
+	if (index < 0 || index >= lenLL(current))
+	{
+		logMsg(E, "getLL: index %d out of range\n", index);
+		return 1;
+	}
+	
+	// travels list until it encounters node with given index
+	for (int i = 0; i < index; i++)
+	{
+		current = current->next;
+	}
+	*node = current;
+
+	return 0;
+}
+
 int popLL(Node **headAddr, int index, char **destination){
 
 	Node *previous = NULL;
