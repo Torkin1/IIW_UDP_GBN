@@ -68,13 +68,15 @@ int main(){
         logMsg(E, "%s\n", strerror(err));
     }
 
-
+    
     // write test functions here
 
     // test1();
     // test2();
     // ...
 
+    testHandShake();
+    
     logMsg(I, "\n\n*** All test are successful, great job! ***\n");
 
     return EXIT_SUCCESS;

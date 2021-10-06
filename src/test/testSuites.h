@@ -37,6 +37,7 @@ void testSendRecvFile();
 void testRecvFile();
 void testDoGetServer();
 void testDoGetClient();
+void testHandShake();
 void testDoPutClient();
 void testDoPutServer();
 

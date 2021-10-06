@@ -48,22 +48,11 @@ typedef enum dmProtocol_command{
 // code defining status of operation after it was performed on server. If status is an error, payload is set as a string describing the error, unless something different is specified in the status 
 typedef enum opStatus{
   
-  /**
-  * Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
-  */
-  OP_STATUS_E = -INT_MAX,           
-
-  /**
-   * Op failed beacuse a file needed by the operation was not found.
-  */
-  OP_STATUS_E_FILE_NOT_FOUND,
-
-  /**
-   * Operation was performed succesfully
-   *
- */ 
-  OP_STATUS_OK = 0,                 
-
+  OP_STATUS_E = -INT_MAX,           // Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
+  OP_STATUS_E_FILE_NOT_FOUND,       // Op failed beacuse a file needed by the operation was not found
+  OP_STATUS_INCORRECT,              // The operation request was done in a incorrect way
+  OP_STATUS_SOCKETS_FULL ,          // There are no free sockets/process that can comunicate
+  OP_STATUS_OK = 0                 // Operation was performed succesfully
 } OpStatus;
 
 
