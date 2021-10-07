@@ -3,7 +3,7 @@
 #include "logger/logger.h"
 #include "dm_protocol/dm_protocol.h"
 
-int main(int argc, char *argv){
+int main(int argc, char *argv[]){
 
   DmProtocol_command toInvoke;
   char **toInvokeArgs;
