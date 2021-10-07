@@ -51,6 +51,8 @@ typedef enum opStatus{
   OP_STATUS_E = -INT_MAX,           // Operation failed beacuse a generic error occurred. This should be used only for internal purposes. Always try to send to dest more meaningful errors
   OP_STATUS_E_FILE_NOT_FOUND,       // Op failed beacuse a file needed by the operation was not found
   OP_STATUS_INCORRECT,              // The operation request was done in a incorrect way
+  OP_STATUS_SENDFILE_FAILED,        // The sendFileDMProtocol failed
+  OP_STATUS_RECIVEFILE_FAILED,      //The recieveFileDMProtcol failed
   OP_STATUS_SOCKETS_FULL ,          // There are no free sockets/process that can comunicate
   OP_STATUS_OK = 0                 // Operation was performed succesfully
 } OpStatus;
@@ -84,7 +86,7 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
  * @param dest_addr pointer to dest address struct
  * @param dest_addr_size size of *dest_addr
  * @param pathName path of file to send
- * @return status of operation. See OpStatus definition
+ * @return 0 if success, -1 if error
 */
 int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_addr_size, int fileD);
 
@@ -94,7 +96,7 @@ int sendFileDMProtocol(int socket, struct sockaddr *dest_addr, socklen_t dest_ad
  * @param dest_addr if not NULL, sender addr is stored in *dest_addr
  * @param dest_addr_size if not NULL, size of sender addr is stored in *dest_addr_size
  * @param filePath path where the received file will be stored
- * @return status of operation. See OpStatus definition
+ * @return 0 if success, -1 if error
 */
 int receiveFileDMProtocol(int socket, struct sockaddr *sender_addr, socklen_t *send_addr_size, int fileD);
 
