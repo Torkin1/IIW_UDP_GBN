@@ -13,7 +13,7 @@ int main(int argc, char *argv[]){
       return EXIT_FAILURE;
   }
 
-  toInvokeArgs = argv + 1;
+  toInvokeArgs = argv + 2;
   if (doCommand(toInvoke, toInvokeArgs) < 0){
     logMsg(E, "main: operation failed\n");
     return EXIT_FAILURE;
