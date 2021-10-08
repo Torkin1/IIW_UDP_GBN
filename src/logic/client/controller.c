@@ -262,7 +262,7 @@ int doGet(char *fileName){
         return -1;
     }
 
-    fd = open(fileName, O_WRONLY | O_CREAT | O_TRUNC);
+    fd = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (receiveFileDMProtocol(getGlobalSocket(), NULL, NULL, fd)){
         logMsg(E, "doGet: failed to receive file conten from server\n");
         return -1;
@@ -291,7 +291,7 @@ int doPut(char *fileName){
     }
 
     // opens file to hold contents sent by server. If already exists, it is overwritten
-    if ((fd = open(fileName, O_RDONLY)) < 0)
+    if ((fd = open(fileName, O_RDONLY, S_IRUSR | S_IWUSR)) < 0)
     {
         err = errno;
         logMsg(E, "doPut: failed to open file %s: %s\n", fileName, strerror(err));

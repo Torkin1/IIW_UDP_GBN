@@ -34,14 +34,20 @@ typedef struct node{
 
 int doPut(struct sockaddr *client_addr, char *filename, int sockfd){
     Message *response;
-    int fd;
+    int fd, err;
+    logMsg(I, "[SERVER_DOPUT] Operation started\n");
+
 
     if(filename == NULL){//Controll tyhat probably isn't necessary
         logMsg(E, "[Server] doPut: fileName can't be NULL\n");
         return -1;
     }
 
-    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
+    if((fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) <0){
+        err = errno;
+        logMsg(E, "[SERVER-DOPUT], doPut: failed to open the file %s: %s\n", filename, strerror(err));
+        return -1;
+    }
     response = newMessage();
 
 
@@ -50,26 +56,28 @@ int doPut(struct sockaddr *client_addr, char *filename, int sockfd){
     response ->message_header ->command = PUT;
     response ->message_header ->payload_lentgh = strlen(filename);
     response ->payload = filename;
-    if(sendMessageDMProtocol(sockfd, (struct sockaddr*)&client_addr, sizeof(client_addr),response) != 0){
-            logMsg(E, "[SERVER]sendMessageDMProtocol on doGet: ERROR Couldn`t send to the client: %s\n", strerror(errno));
+    if(sendMessageDMProtocol(sockfd, (struct sockaddr*)client_addr, sizeof(*client_addr),response) != 0){
+            logMsg(E, "[SERVER]sendMessageDMProtocol on doPut: ERROR Couldn`t send to the client: %s\n", strerror(errno));
             destroyMessage(response);
             return -1;
     }
 
     if(receiveFileDMProtocol(sockfd, NULL, NULL, fd)){
-        response ->message_header ->status = OP_STATUS_OK;
+        /*
+        response ->message_header ->status = OP_STATUS_RECIVEFILE_FAILED;
         response ->message_header ->command = PUT;
         response ->message_header ->payload_lentgh = strlen(filename);
         response ->payload = filename;
-        /* //implement if needed
+         //implement if needed
         if(sendMessageDMProtocol(sockfd, (struct sockaddr*)&client_addr, sizeof(client_addr),response) != 0){
             logMsg(E, "[SERVER]recieveFileDMProtocol on doPut: ERROR nothing recieved from the client: %s\n", strerror(errno));
             destroyMessage(response);
             return -1;
         }*/
-        logMsg(E, "[SERVER]: doPut failed to receive file content from the client\n");
+        logMsg(E, "[SERVER-DOPUT]: doPut failed to receive file content from the client\n");
         return -1;
     }
+    logMsg(I, "[SERVER_DOPUT] Operation done\n");
 
     
     return 0;
@@ -79,6 +87,7 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
     int fd, err;
     Message *respond;
 
+    logMsg(D,"[SERVER-DOGET] starting brother the filename is %s\n", filename);
     //filename must be not NULL
     if(filename == NULL){
         logMsg(E, "[SERVER], doGet have a filename == NULL\n");
@@ -88,7 +97,7 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
     //Sending the file to the client
     respond = newMessage();
     //opens the file
-    if((fd = open(filename, O_RDONLY) )){
+    if((fd = open(filename, O_RDONLY, S_IRUSR | S_IWUSR)) < 0){
         err = errno;
         logMsg(E, "[SERVER], doGet: failed to open the file %s: %s\n", filename, strerror(err));
         respond ->message_header ->command = GET;
@@ -104,24 +113,28 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
         destroyMessage(respond);
         return -1;
     }
-
+    logMsg(D, "[SEVER-DOGET] open didn't fail\n");
     
 
     //respond to the command
     respond ->message_header ->command = GET;
     respond ->message_header ->payload_lentgh = strlen(filename) + 1;
+    respond ->payload = filename;
     respond ->message_header ->status = OP_STATUS_OK;
-    if(sendMessageDMProtocol(sockfd, (struct sockaddr*)&client_addr, sizeof(client_addr),respond) != 0){
+    if(sendMessageDMProtocol(sockfd, (struct sockaddr*)client_addr, sizeof(*client_addr),respond) != 0){
         logMsg(E, "[SERVER]sendMessageDMProtocol on doGet: ERROR Couldn`t send to the client: %s\n", strerror(errno));
         destroyMessage(respond);
         return -1;
     }
+    logMsg(D, "[SERVER-DOGET] before sendFile\n");
 
-    if(sendFileDMProtocol(sockfd, (struct sockaddr *) &client_addr,sizeof(client_addr), respond ) !=0){
+
+    if(sendFileDMProtocol(sockfd, (struct sockaddr *) client_addr,sizeof(*client_addr), fd) !=0){
         
         logMsg(E, "[SERVER] sendFile in doGet failed\n");
         return -1;
     }
+    logMsg(D, "[SERVER-DOGET] after sendFile\n");
 
     return 0;
 }
@@ -300,22 +313,23 @@ void operate(p_i *process_index){
             }
             logMsg(D, "I'm after the lock\n");
             //TODO OPERAZIONI ricordare chiusura messaggi socket e sem.
-//Domandare a daniele dove si salva il 
+//Domandare a daniele dove si salva il file
             switch (cmd_msg_respond->message_header->command)
             {
-            /*case PUT:
+            case PUT:
                 if((doPut((struct sockaddr *)&client_addr, cmd_msg_respond->payload, servers_socket)) != 0){
-                    logMsg(E, "doPut from server failed");
+                    logMsg(E, "doPut from server failed\n");
                 }
                 break;
             case GET:
+                logMsg(D, "[OPERATE-DOGET] the file name is: %s\n", cmd_msg_respond->payload);
                 if((doGet((struct sockaddr *)&client_addr, cmd_msg_respond->payload, servers_socket)) != 0){
-                    logMsg(E, "doGet from server failed");
+                    logMsg(E, "doGet from server failed\n");
                 }
-                break;*/
+                break;
             case LIST:
                 if(doList((struct sockaddr *)&client_addr, cmd_msg_respond->payload,servers_socket) != 0){
-                    logMsg(E, "doList from server failed");
+                    logMsg(E, "doList from server failed\n");
 
                 }
                 break;
