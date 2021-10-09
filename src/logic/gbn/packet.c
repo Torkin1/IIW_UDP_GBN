@@ -19,10 +19,12 @@ Packet *newPacket(){
 
 void destroyPacket(Packet *self){
 
-    free(self ->data);
-    free(self ->header);
-    free(self);
-
+    if (self != NULL)
+    {
+        free(self->data);
+        free(self->header);
+        free(self);
+    }
 };
 
 /*

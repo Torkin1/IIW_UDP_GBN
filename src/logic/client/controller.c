@@ -27,22 +27,26 @@ DmProtocol_command *getCommandByName(char *name){
 
     if (supportedCommandNames == NULL){
         supportedCommandNames = newHashTable();
-        
+
+        const char *putName = "put";
+        const char *getName = "get";
+        const char *listName = "list";
+
         // populate table with commands using names as key
-        char *putKey = calloc(strlen("PUT") + 1, sizeof(char));
-        strcpy(putKey, "PUT");
+        char *putKey = calloc(strlen(putName) + 1, sizeof(char));
+        strcpy(putKey, putName);
         DmProtocol_command *putCommand = calloc(1, sizeof(DmProtocol_command));
         *putCommand = PUT;
         addToHashTable(supportedCommandNames, putKey, strlen(putKey), putCommand);
 
-        char *getKey = calloc(strlen("GET") + 1, sizeof(char));
-        strcpy(getKey, "GET");
+        char *getKey = calloc(strlen(getName) + 1, sizeof(char));
+        strcpy(getKey, getName);
         DmProtocol_command *getCommand = calloc(1, sizeof(DmProtocol_command));
         *getCommand = GET;
         addToHashTable(supportedCommandNames, getKey, strlen(getKey), getCommand);
 
-        char *listKey = calloc(strlen("LIST") + 1, sizeof(char));
-        strcpy(listKey, "LIST");
+        char *listKey = calloc(strlen(listName) + 1, sizeof(char));
+        strcpy(listKey, listName);
         DmProtocol_command *listCommand = calloc(1, sizeof(DmProtocol_command));
         *listCommand = LIST;
         addToHashTable(supportedCommandNames, listKey, strlen(listKey), listCommand);
@@ -97,7 +101,7 @@ int getGlobalSocket(){
         for (clientPort = MIN_PORT; clientPort <= MAX_PORT; clientPort++)
         {
             clientAddr.sin_port = htons(clientPort);
-            bindRes = bind(globalSd, &clientAddr, sizeof(clientAddr));
+            bindRes = bind(globalSd, (struct sockaddr *)&clientAddr, sizeof(clientAddr));
             bindResErrno = errno;
             if (bindRes == 0)
             {
@@ -123,9 +127,9 @@ int parseCommandName(int argc, char *argv[], DmProtocol_command *toInvoke){
     char *toInvokeName;
 	
 	// parses command name
-	if (argc < 1){
-		logMsg(E, "%s: not enough arguments\n", argv[0]);
-		logMsg(I, "%s: usage: ./client.c command args ...\n", argv[0]);
+	if (argc < 2){
+		logMsg(E, "parseCommandName: not enough arguments\n");
+		logMsg(I, "parseCommandName: usage: ./client.c command args ...\n");
 		return -1;
 	}
 	toInvokeName = argv[1];
@@ -133,7 +137,7 @@ int parseCommandName(int argc, char *argv[], DmProtocol_command *toInvoke){
 	// retrieves command corresponding with given command name if there is one, else an error is reported and exits
 	DmProtocol_command *toInvokeBuf = getCommandByName(toInvokeName);
 	if (toInvokeBuf == NULL){
-		logMsg(E, "%s: unrecognized operation: %s\n", argv[0], toInvokeName);
+		logMsg(E, "parseCommandName: unrecognized operation: %s\n", toInvokeName);
 		return -1;
 	}
 	*toInvoke = *toInvokeBuf;
@@ -246,7 +250,7 @@ int doGet(char *fileName){
     request ->message_header ->command = GET;
     request ->message_header ->payload_lentgh = strlen(fileName) + 1;
     request ->payload = fileName;
-    if (sendMessageDMProtocol(getGlobalSocket(), &assignedServerAddress, sizeof(assignedServerAddress), request)){
+    if (sendMessageDMProtocol(getGlobalSocket(), (struct sockaddr *)&assignedServerAddress, sizeof(assignedServerAddress), request)){
         logMsg(E, "doGet: failed to send request\n");
         return -1;
     }
@@ -267,6 +271,16 @@ int doGet(char *fileName){
         logMsg(E, "doGet: failed to receive file conten from server\n");
         return -1;
     }
+
+    while (receiveMessageDMProtocol(getGlobalSocket(), NULL, NULL, &response) != 0 || response ->message_header ->command != GET){
+        logMsg(E, "doGet: an error occurred while listening for server response, or received a response for a different command than expected. Still listening ...\n");
+    }
+    if(response ->message_header ->status != OP_STATUS_OK){
+        
+        logMsg(E, "doGet: server reponded with error %d: %s\n", response ->message_header ->status, response ->payload);
+        return -1;
+    }
+
     logMsg(I, "File %s successfully received\n", fileName);
 
     return 0;
@@ -356,7 +370,7 @@ int doCommand(DmProtocol_command toInvoke, char *toInvokeArgs[]){
 			break;
 
         default:
-		logMsg(E, "%s: doCommand: unsupported operation with code: %d\n", toInvoke);
+		logMsg(E, "doCommand: unsupported operation with code: %d\n", toInvoke);
 		return -1;
     }
 

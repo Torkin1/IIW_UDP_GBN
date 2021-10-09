@@ -166,7 +166,7 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
     /** TODO: this solves #59
      * sends a packet only if it has the same msgId of the first packet in send window
      * */
-    int msgIdToSend; 
+    int msgIdToSend = -1; 
     int launches = 0;
     for (int i = base; i < nextSeqNum; i ++)
     {
@@ -332,13 +332,12 @@ void listenForAcks()
 
         else
         {
-
+            pthread_sigmask(SIG_BLOCK, &blockedSignalsWhileAcking, NULL);
             // a packet has been received, but there is no guarantee that it is an ACK
             ack = deserializePacket(buf);
             if (ack->header->isAck)
             {
 
-                pthread_sigmask(SIG_BLOCK, &blockedSignalsWhileAcking, NULL);
                 pthread_mutex_lock(&sendWindowLock);
 
                 base = getSendWindowReference()->base;
@@ -406,11 +405,12 @@ void listenForAcks()
                 pthread_mutex_unlock(&launchBatteryLock);
                 pthread_mutex_unlock(&sendWindowLock);
 
+                destroyPacket(ack);
+
                 // send window could now contain packets to send;
                 notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
                 pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
-                destroyPacket(ack);
             }
         }
     }

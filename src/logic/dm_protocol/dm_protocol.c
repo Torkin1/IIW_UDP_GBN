@@ -68,8 +68,8 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
       toSendMsg->payload = chunk;
       toSendMsg->message_header->more = more;
       toSendMsg->message_header->payload_lentgh = bytesRead;
+      toSendMsg ->message_header->command = UNSPECIFIED;
 
-      logMsg(D, "more is %d\n", more);
       while (sendMessageDMProtocol(socket, (struct sockaddr *) dest_addr, dest_addr_size, toSendMsg) < 0)
       {
         logMsg(E, "sendFileDMProtocol: failed to send chunk, will retry in %d secs\n", WAIT_SECS_BEFORE_RETRY);
@@ -77,9 +77,9 @@ int receiveMessageDMProtocol(int socket, struct sockaddr *sender_addr,
       }
       destroyMessage(toSendMsg);
 
-      while (receiveMessageDMProtocol(socket, NULL, NULL, &chunkHasArrivedMsg) < 0 && chunkHasArrivedMsg->message_header->status != OP_STATUS_OK)
+      while (receiveMessageDMProtocol(socket, NULL, NULL, &chunkHasArrivedMsg) < 0 && chunkHasArrivedMsg ->message_header ->command != (int) UNSPECIFIED && chunkHasArrivedMsg->message_header->status != OP_STATUS_OK)
       {
-        logMsg(E, "sendFileDMProtocol: an error occurred while listening if chunk has arrived to dest, still listening ...\n");
+        logMsg(E, "sendFileDMProtocol: an error occurred while listening if chunk has arrived to dest, or a message different from a chunk acknowledgment has been catched and discarded, still listening ...\n");
       }
       logMsg(D, "sendFileDMProtocol: dest received chunk\n");
       destroyMessage(chunkHasArrivedMsg);

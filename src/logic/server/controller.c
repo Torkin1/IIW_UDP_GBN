@@ -23,7 +23,7 @@ char *program_name;
 
 typedef struct Process_info{
         int servers_socket;
-        sem_t s_busy;
+        sem_t *s_busy;
         int pid;
  } p_i;
 
@@ -78,7 +78,7 @@ int doPut(struct sockaddr *client_addr, char *filename, int sockfd){
         return -1;
     }
     logMsg(I, "[SERVER_DOPUT] Operation done\n");
-
+    close(fd);
     
     return 0;
 }
@@ -118,12 +118,9 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
 
     //respond to the command
     respond ->message_header ->command = GET;
-    respond ->message_header ->payload_lentgh = strlen(filename) + 1;
-    respond ->payload = filename;
     respond ->message_header ->status = OP_STATUS_OK;
     if(sendMessageDMProtocol(sockfd, (struct sockaddr*)client_addr, sizeof(*client_addr),respond) != 0){
         logMsg(E, "[SERVER]sendMessageDMProtocol on doGet: ERROR Couldn`t send to the client: %s\n", strerror(errno));
-        destroyMessage(respond);
         return -1;
     }
     logMsg(D, "[SERVER-DOGET] before sendFile\n");
@@ -135,6 +132,13 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
         return -1;
     }
     logMsg(D, "[SERVER-DOGET] after sendFile\n");
+    if(sendMessageDMProtocol(sockfd, (struct sockaddr*)client_addr, sizeof(*client_addr),respond) != 0){
+        logMsg(E, "[SERVER]sendMessageDMProtocol on doGet: ERROR Couldn`t send to the client: %s\n", strerror(errno));
+        return -1;
+    }
+    destroyMessage(respond);
+
+    close(fd);
 
     return 0;
 }
@@ -213,20 +217,53 @@ int doList(struct sockaddr *client_addr,char *separator, int sockfd){
 
 }
 
+/**
+ * Iterates on handlers searching for a free one to assign a client.
+ * @param handlers p_i array with the handlers
+ * @param n num of handlers 
+ * @return free handler index in process_index if there is one handler free, else -1 
+*/
+int assignHandler(p_i *handlers, int n){
+
+    int i, err;
+    for (i = 0; i < n; i++)
+    {
+        if (sem_trywait(handlers[i].s_busy) == 0)
+        {
+            return i;
+        }
+
+        /** 
+         * EAGAIN means that handler is busy.
+         * Everything else is an error, meaning that we can't know if the handler if busy.
+         * In this case, we assume that the handler can't handle the request for some reason (it could be dead lol), and we keep searching for a free one. 
+        */
+        err = errno;
+        if (err != EAGAIN)
+        {
+            logMsg(E, "assignHandler: failed to wait on semaphore of handler %d: %s\n", i, strerror(err));
+        }
+    }
+
+    // at this point all handlers are busy or unavailable.
+    return -1;
+}
+
 void operate(p_i *process_index){
-    struct sockaddr_in client_addr;
-    int n_process = 1;
+    struct sockaddr_in client_addr = {0};
+    int n_process;
     socklen_t addr_size;
-    int pid;
+    Message *recived_message, *response_message;
+    //int pid;
 
            logMsg(D, "I'm gonna create the process\n");
 
     //creating an "array "of pids on the struct p_i(of ALWAYS active process)
-    for(n_process; n_process <= MAX_CLIENT; n_process++){
-        if((pid = fork()) == 0){
+    for(int i = 1; i <= MAX_CLIENT; i++){
+        n_process = i;
+        if((process_index[n_process].pid = fork()) == 0){
             //The case of the fork failing is not considered.
         //saving the pid on the struct in case i need it
-            process_index[n_process].pid = pid;
             
             break;
         }  
@@ -234,13 +271,12 @@ void operate(p_i *process_index){
     int count = 0;
     while(1){
         //define a message that can be used to read the header, so the command
-        Message *recived_message;
         count++;
-        int servers_socket = process_index[n_process].servers_socket;
+        //int servers_socket = process_index[n_process].servers_socket;
 
         
 
-        if(pid !=0){
+        if(process_index[n_process].pid !=0){
             logMsg(D, "[SERVER] Father process waiting for the HS and my scoket is:%d for the %d\n", process_index[0].servers_socket, count);
             if(receiveMessageDMProtocol(process_index[0].servers_socket, (struct sockaddr *)&client_addr,
             &addr_size, &recived_message) < 0){
@@ -248,50 +284,46 @@ void operate(p_i *process_index){
                 exit(EXIT_FAILURE);
             }
 
-            Message *response_message;
             response_message = newMessage();
 
             if(recived_message->message_header->command != HS){
                 response_message -> message_header ->command = HS;
                 response_message -> message_header -> status = OP_STATUS_INCORRECT;
                 char *response = "Error occured. This port is only for H-S, check it\n";
-                response_message ->message_header ->payload_lentgh = strlen(response);
-                //NON SICURO DI QUESTO STRLEN, RAGIONARE IN SEGUITO !!!!!!!!!!!! Fare per 8? da ch a bit?
+                response_message ->message_header ->payload_lentgh = strlen(response) + 1;
+                //NON SICURO DI QUESTO STRLEN, RAGIONARE IN SEGUITO !!!!!!!!!!!! Fare per 8? da ch a bit?   (è fatto bene -daniele)
                 response_message -> payload = response;
-                sendMessageDMProtocol(servers_socket, (struct sockaddr*)&client_addr,
+                sendMessageDMProtocol(process_index[0].servers_socket, (struct sockaddr*)&client_addr,
                 sizeof(client_addr),response_message);
             }
             else{
                 //passare la porta una volta ricevuto l'operazione di H-S del
                 //processo disponibile.
-                int token_value = 0;
-                for(int i = 0; MAX_CLIENT; i++){
-                    sem_getvalue(&(process_index[i].s_busy), &token_value);
-                    if(token_value == 1){
-                        response_message ->message_header -> status = OP_STATUS_OK;
-                        in_port_t free_port = DEFAULT_SERVER_PORT + 1 + i;
-                        response_message ->message_header ->command = HS;
-                        response_message ->message_header ->payload_lentgh = sizeof(in_port_t);
-                        response_message ->payload = &free_port;
-                        break;
-                        }
-                    else{
-                        response_message ->message_header -> status = OP_STATUS_E;
-                        response_message ->message_header ->command = HS;
-                        char *response = "ERROR: No free ports at the moments";
-                        response_message -> message_header ->payload_lentgh = strlen(response)+1;
-                        response_message ->payload = response;
-                    }
-
+                logMsg(D, "operate: received HS request\n");
+                int freeHandler, freeHandlerIndex;
+                if ((freeHandler = assignHandler(process_index + 1, MAX_CLIENT)) < 0){
+                    response_message->message_header->status = OP_STATUS_E;
+                    response_message->message_header->command = HS;
+                    char *response = "ERROR: No free ports at the moments";
+                    response_message->message_header->payload_lentgh = strlen(response) + 1;
+                    response_message->payload = response;
+                }
+                else {
+                    freeHandlerIndex = freeHandler + 1;
+                    response_message->message_header->status = OP_STATUS_OK;
+                    in_port_t free_port = DEFAULT_SERVER_PORT + freeHandlerIndex;
+                    response_message->message_header->command = HS;
+                    response_message->message_header->payload_lentgh = sizeof(in_port_t);
+                    response_message->payload = &free_port;
                 }
                 //send the reply  for the HS
-                
                 if(sendMessageDMProtocol(process_index[0].servers_socket, (struct sockaddr*)&client_addr, sizeof(client_addr),response_message) != 0){
                     logMsg(E, "sendMessageDMProtocol from server on doList: ERROR Couldn`t send to the client: %s\n", strerror(errno));
                 }
 
             }
             destroyMessage(response_message);
+            destroyMessage(recived_message);
 
         }
 
@@ -300,44 +332,46 @@ void operate(p_i *process_index){
             logMsg(D, "I'm on the while with the pid: %d for the %d time, my n_process is: %d my socket is:%d\n", process_index[n_process].pid, count, n_process, process_index[n_process].servers_socket);
             Message *cmd_msg_respond;
             
-            logMsg(D, "[Server] Hi, I'm the child, my socket is:%d \n", servers_socket);
+            logMsg(D, "[%d] Hi, I'm the child, my socket is:%d \n", n_process, process_index[n_process].servers_socket);
 
-            if(receiveMessageDMProtocol(servers_socket, (struct sockaddr *)&client_addr,
+            if(receiveMessageDMProtocol(process_index[n_process].servers_socket, (struct sockaddr *)&client_addr,
             &addr_size, &cmd_msg_respond) < 0){
                 logMsg(E, "reciveMessageDMProtocol from server: ERROR Couldn`t connect with hthe client: %s\n", strerror(errno));
             }
 
-            logMsg(D, "[SERVER-CHILD]Recieved MSg, I'll lock the semaphore number: %d, with the pid: %d for the %d\n", n_process, process_index[n_process].pid, count);
+            /*logMsg(D, "[SERVER-CHILD]Recieved MSg, I'll lock the semaphore number: %d, with the pid: %d for the %d\n", n_process, process_index[n_process].pid, count);
             if((sem_wait(&(process_index[n_process].s_busy)))<0){
                 logMsg(E, "The sema_wait failed! %s",strerror(errno));
             }
             logMsg(D, "I'm after the lock\n");
+            */
             //TODO OPERAZIONI ricordare chiusura messaggi socket e sem.
 //Domandare a daniele dove si salva il file
             switch (cmd_msg_respond->message_header->command)
             {
             case PUT:
-                if((doPut((struct sockaddr *)&client_addr, cmd_msg_respond->payload, servers_socket)) != 0){
+                if((doPut((struct sockaddr *)&client_addr, cmd_msg_respond->payload, process_index[n_process].servers_socket)) != 0){
                     logMsg(E, "doPut from server failed\n");
                 }
                 break;
             case GET:
                 logMsg(D, "[OPERATE-DOGET] the file name is: %s\n", cmd_msg_respond->payload);
-                if((doGet((struct sockaddr *)&client_addr, cmd_msg_respond->payload, servers_socket)) != 0){
+                if((doGet((struct sockaddr *)&client_addr, cmd_msg_respond->payload, process_index[n_process].servers_socket)) != 0){
                     logMsg(E, "doGet from server failed\n");
                 }
                 break;
             case LIST:
-                if(doList((struct sockaddr *)&client_addr, cmd_msg_respond->payload,servers_socket) != 0){
+                if(doList((struct sockaddr *)&client_addr, cmd_msg_respond->payload,process_index[n_process].servers_socket) != 0){
                     logMsg(E, "doList from server failed\n");
 
                 }
                 break;
             default:
+                logMsg(E, "[%d] operate: unrecognized command\n", process_index[n_process].pid);
                 break;
             } 
             //Semaphore of the n_process to 1 again
-            sem_post(&(process_index[n_process].s_busy));
+            sem_post(process_index[n_process].s_busy);
             logMsg(D, "[SERVER] Semaphores to 1\n");
 
 
@@ -350,53 +384,45 @@ void operate(p_i *process_index){
 
 int main(int argc, char *argv[]){
     //VARIABLES
-    int server_sockfd;
-    struct sockaddr_in server_addr;
+    //int server_sockfd;
+    struct sockaddr_in server_addr = {0};
 
     program_name = argv[0] + 2;
-    p_i *process_index;
+    p_i process_index[MAX_CLIENT + 1];
     
-    if((process_index = mmap(NULL, MAX_CLIENT*sizeof(p_i), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0)) == (void*)-1){
-        logMsg(E,"SERVER-MAIN, failed the mmap %s", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
     logMsg(D, "I'll create sockets and things\n");
 
 
     //For to open all the socket for the capacity of MAX_CLIENT
-    for(int i = 0; i <= MAX_CLIENT; i++){
-        if((server_sockfd = socket(AF_INET, SOCK_DGRAM,0)) < 0){
+    for(int i = 0; i < MAX_CLIENT + 1; i++){
+        if((process_index[i].servers_socket = socket(AF_INET, SOCK_DGRAM,0)) < 0){
             logMsg(E, "[ERROR][SERVER] Impossible to create the socket %s\n",strerror(errno));
             exit(1);
         }
-
 
 
         server_addr.sin_family = AF_INET;
         server_addr.sin_addr.s_addr = htonl(DEFAULT_SERVER_ADDR);
         server_addr.sin_port = htons(DEFAULT_SERVER_PORT + i);
 
-            logMsg(D, "I'm in a for binding, for the %d time the sockets is: %d\n",i,server_sockfd);
+            logMsg(D, "I'm in a for binding, for the %d time the sockets is: %d\n",i,process_index[i].servers_socket);
 
 
         //Bind the socket
-        if((bind(server_sockfd, (struct sockaddr *)&server_addr,
+        if((bind(process_index[i].servers_socket, (struct sockaddr *)&server_addr,
          sizeof(server_addr))) < 0){
             logMsg(E, "[ERROR][SERVER] Bind failed %s\n",strerror(errno));
             exit(1);
          }
 
-         process_index[i].servers_socket = server_sockfd;
          if(i > 0){
-             logMsg(D, "Delcaring sempahores %d \n", i, &(process_index[i].s_busy));
-            //dichiaro i semafori
-            sem_init(&(process_index[i].s_busy), 1, 1);
+             logMsg(D, "Delcaring sempahores %d \n", i, process_index[i].s_busy);
+            //dichiaro i semafori. Must be dynamic memory in order to make it accessible from all processes
+            process_index[i].s_busy = mmap(NULL, sizeof(p_i), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+            sem_init(process_index[i].s_busy, 1, 1);
             int value;
-            sem_getvalue(&(process_index[i].s_busy), &value);
+            sem_getvalue(process_index[i].s_busy, &value);
             logMsg(D, "I wrote the sempahores, value of %d , is %d\n", i, value);
-            process_index[i].servers_socket = server_sockfd;
-            logMsg(D, "declared semaphore\n");
          }
     }
 
@@ -408,7 +434,7 @@ int main(int argc, char *argv[]){
     //Desotrying the semaphores
     for(int i = 0; MAX_CLIENT; i++){
         close((process_index[i].servers_socket));
-        sem_destroy((&(process_index[i].s_busy)));
+        sem_destroy((process_index[i].s_busy));
     }
     return 0;
 }

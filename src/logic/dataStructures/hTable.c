@@ -57,9 +57,9 @@ void destroyHashTable(HashTable *self){
 // Calculates hash from key
 unsigned hash(uint8_t *key, int keyLen){
 
-    unsigned hash = 0;
+    unsigned hash = 1;
     for (int i = 0; i < keyLen; i ++){
-        hash = key[i] + (PRIME * hash);
+        hash += (int) key[i] + (PRIME * hash);
     }
     return (hash % HASHSIZE);
 }
@@ -135,7 +135,7 @@ void addToHashTable(HashTable *self, void *key, int keyLen, void *value){
             }
 
             // No pair was found, adding a new one
-            appendLL((self -> table) + (int) h, (char *) pair);
+            appendLL((self -> table) + h, (char *) pair);
 
         }
     }
@@ -156,8 +156,8 @@ void removeFromHashTable(HashTable *self, void* key, int keyLen){
                 Pair *pair = (Pair *) currentEntryPointer -> value;
                 if (memcmp(pair -> key, key, keyLen) == 0){
                     destroyPair(pair);
-                    popLL(&currentEntryPointer, i, NULL);
-                    break;
+                    popLL((self -> table) + h, i, NULL);
+                    return;
                 }
             }
         }

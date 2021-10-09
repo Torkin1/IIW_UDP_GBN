@@ -24,7 +24,6 @@ int sendMessageGbn(int sd, struct sockaddr *dest_addr, socklen_t addrlen, void *
         pthread_mutex_unlock(&launchBatteryLock);
         return -1;
     }
-    logMsg(D, "sendMessageGbn: packets added to the battery\n");
 
     // registers the message in the send table
     SortingEntry *sendEntry = newSortingEntry();
