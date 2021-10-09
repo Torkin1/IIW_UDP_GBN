@@ -79,7 +79,7 @@ int doPut(struct sockaddr *client_addr, char *filename, int sockfd){
     }
     logMsg(I, "[SERVER_DOPUT] Operation done\n");
     close(fd);
-    
+    close(fd);    
     return 0;
 }
 
@@ -101,16 +101,17 @@ int doGet(struct sockaddr *client_addr, char *filename, int sockfd){
         err = errno;
         logMsg(E, "[SERVER], doGet: failed to open the file %s: %s\n", filename, strerror(err));
         respond ->message_header ->command = GET;
-        char *errorMessage = "[SERVER] Couldn't open the file\n";
+        char *errorMessage = strerror(err);
         respond ->message_header ->payload_lentgh = strlen(errorMessage);
         respond  ->payload = errorMessage;
         respond ->message_header ->status = OP_STATUS_E_FILE_NOT_FOUND;
-        if(sendMessageDMProtocol(sockfd, (struct sockaddr*)&client_addr, sizeof(client_addr),respond) != 0){
+        if(sendMessageDMProtocol(sockfd, (struct sockaddr*)client_addr, sizeof(*client_addr),respond) != 0){
             logMsg(E, "[SERVER]sendMessageDMProtocol on doGet: ERROR Couldn`t send to the client: %s\n", strerror(errno));
             destroyMessage(respond);
             return -1;
         }
         destroyMessage(respond);
+        close(fd);
         return -1;
     }
     logMsg(D, "[SEVER-DOGET] open didn't fail\n");
@@ -269,6 +270,8 @@ void operate(p_i *process_index){
         }  
     }
     int count = 0;
+    struct sockaddr_in sin;
+    socklen_t len = sizeof(sin);
     while(1){
         //define a message that can be used to read the header, so the command
         count++;
@@ -278,6 +281,10 @@ void operate(p_i *process_index){
 
         if(process_index[n_process].pid !=0){
             logMsg(D, "[SERVER] Father process waiting for the HS and my scoket is:%d for the %d\n", process_index[0].servers_socket, count);
+            if((getsockname(process_index[0].servers_socket, (struct sockaddr *)&sin, &len)) == -1){
+                logMsg(D,"[SERVER-FATHER] couldn't check the port of the socket %d\n", process_index[0].servers_socket);
+            }else
+                logMsg(D, "[SERVER-FATHER] port number %d\n", ntohs(sin.sin_port));
             if(receiveMessageDMProtocol(process_index[0].servers_socket, (struct sockaddr *)&client_addr,
             &addr_size, &recived_message) < 0){
                 logMsg(E, "reciveMessageDMProtocol from server: ERROR Couldn`t connect wit hthe client: %s\n", strerror(errno));
@@ -329,6 +336,12 @@ void operate(p_i *process_index){
 
 
         else{
+            
+            if((getsockname(process_index[n_process].servers_socket, (struct sockaddr *)&sin, &len)) == -1){
+                logMsg(D,"[SERVER-CHILD] couldn't check the port of the socket %d\n", process_index[n_process].servers_socket);
+            }else
+                logMsg(D, "[SERVER-CHILD] port number %d\n", ntohs(sin.sin_port));
+
             logMsg(D, "I'm on the while with the pid: %d for the %d time, my n_process is: %d my socket is:%d\n", process_index[n_process].pid, count, n_process, process_index[n_process].servers_socket);
             Message *cmd_msg_respond;
             
