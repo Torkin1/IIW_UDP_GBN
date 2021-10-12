@@ -163,7 +163,7 @@ int sendAllPacketsInWindowCore(LaunchPadStatus statuses[], int numOfStatuses)
         nextSeqNum += QUEUE_LEN;
     }
 
-    /** TODO: this solves #59
+    /** this solves #59
      * sends a packet only if it has the same msgId of the first packet in send window
      * */
     int msgIdToSend = -1; 
