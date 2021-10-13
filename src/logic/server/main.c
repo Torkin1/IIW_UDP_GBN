@@ -63,12 +63,11 @@ int doPut(struct sockaddr *client_addr, char *filename, int sockfd){
     }
 
     if(receiveFileDMProtocol(sockfd, NULL, NULL, fd)){
-        /*
+        /* TODO: implement recv error handling logic
         response ->message_header ->status = OP_STATUS_RECIVEFILE_FAILED;
         response ->message_header ->command = PUT;
         response ->message_header ->payload_lentgh = strlen(filename);
         response ->payload = filename;
-         //implement if needed
         if(sendMessageDMProtocol(sockfd, (struct sockaddr*)&client_addr, sizeof(client_addr),response) != 0){
             logMsg(E, "[SERVER]recieveFileDMProtocol on doPut: ERROR nothing recieved from the client: %s\n", strerror(errno));
             destroyMessage(response);
@@ -275,10 +274,6 @@ void operate(p_i *process_index){
     while(1){
         //define a message that can be used to read the header, so the command
         count++;
-        //int servers_socket = process_index[n_process].servers_socket;
-
-        
-
         if(process_index[n_process].pid !=0){
             logMsg(D, "[SERVER] Father process waiting for the HS and my scoket is:%d for the %d\n", process_index[0].servers_socket, count);
             if((getsockname(process_index[0].servers_socket, (struct sockaddr *)&sin, &len)) == -1){
@@ -298,7 +293,6 @@ void operate(p_i *process_index){
                 response_message -> message_header -> status = OP_STATUS_INCORRECT;
                 char *response = "Error occured. This port is only for H-S, check it\n";
                 response_message ->message_header ->payload_lentgh = strlen(response) + 1;
-                //NON SICURO DI QUESTO STRLEN, RAGIONARE IN SEGUITO !!!!!!!!!!!! Fare per 8? da ch a bit?   (è fatto bene -daniele)
                 response_message -> payload = response;
                 sendMessageDMProtocol(process_index[0].servers_socket, (struct sockaddr*)&client_addr,
                 sizeof(client_addr),response_message);
@@ -352,14 +346,6 @@ void operate(p_i *process_index){
                 logMsg(E, "reciveMessageDMProtocol from server: ERROR Couldn`t connect with hthe client: %s\n", strerror(errno));
             }
 
-            /*logMsg(D, "[SERVER-CHILD]Recieved MSg, I'll lock the semaphore number: %d, with the pid: %d for the %d\n", n_process, process_index[n_process].pid, count);
-            if((sem_wait(&(process_index[n_process].s_busy)))<0){
-                logMsg(E, "The sema_wait failed! %s",strerror(errno));
-            }
-            logMsg(D, "I'm after the lock\n");
-            */
-            //TODO OPERAZIONI ricordare chiusura messaggi socket e sem.
-//Domandare a daniele dove si salva il file
             switch (cmd_msg_respond->message_header->command)
             {
             case PUT:
