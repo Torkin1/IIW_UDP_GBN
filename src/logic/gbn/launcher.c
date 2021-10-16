@@ -337,18 +337,12 @@ void listenForAcks()
             ack = deserializePacket(buf);
             if (ack->header->isAck)
             {
-
+                // all packets up to the specified index are ACKED
                 pthread_mutex_lock(&sendWindowLock);
-
                 base = getSendWindowReference()->base;
-
-                // acks referred to already acked packets are discarded
                 ackIndex = ack->header->index;
                 logMsg(D, "listenForAcks: accepted ACK with msgId=%d and index=%d\n", ack->header->msgId, ackIndex);
-
-                // all packets up to the specified index are ACKED
                 pthread_mutex_lock(&launchBatteryLock);
-
                 if (ackIndex < base)
                 {
                     ackIndex += QUEUE_LEN;
@@ -388,7 +382,7 @@ void listenForAcks()
                         pthread_mutex_unlock(&sendTableLock);
                     }
 
-                    // timeout of oldest packet in window must be stopped
+                    // timeout of oldest packet in window must be restarted
                     if (getTimerReference()->isAlive)
                     {
                         timeout(getTimerReference(), AT_TIMEOUT_RESTART);

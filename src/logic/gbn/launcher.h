@@ -6,7 +6,7 @@
 // Launcher must respond to all events listed below
 typedef enum launcherEvent{
 
-    LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW,         // Some new packets have been added to the battery
+    LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW,         // Some new packets may have been added to the send window
     LAUNCHER_EVENT_PACKET_TIMED_OUT,                   // A sent packet timeout expired
     LAUNCHER_EVENT_SHUTDOWN,                           // Launcher must be turned off
 

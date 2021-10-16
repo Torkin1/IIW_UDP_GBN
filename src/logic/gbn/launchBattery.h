@@ -43,11 +43,11 @@ typedef struct launchBattery{
 
     LaunchPad *battery[QUEUE_LEN];          // the actual queue
 
-                                            /*
-                                                tracks number of contiguous pads available.
-                                                This redundancy is useful because it kills the need to check every pad to know if there is enough space to add more packets.
-                                                Must be updated whenever new packets are added or packets in battery are ACKED or LOST
-                                            */
+    /*
+        tracks number of contiguous pads available.
+        This redundancy is useful because it kills the need to check every pad to know if there is enough space to add more packets.
+        Must be updated whenever new packets are added or packets in battery are ACKED or LOST
+    */
     int contiguousPadsAvailable;
     int nextAvailableIndex;                 // index next to the last pad occupied
 
