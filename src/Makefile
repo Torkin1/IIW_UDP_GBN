@@ -27,6 +27,8 @@ TEST_COMMON=$(shell find $(TEST_DIR) \( -path $(TEST_DIR)/client -o -path $(TEST
 TEST_CLIENT=$(TEST_COMMON) $(filter-out $(LOGIC_DIR)/client/main.c, $(LOGIC_CLIENT)) $(shell find $(TEST_DIR)/client -name "*.c")
 TEST_SERVER=$(TEST_COMMON) $(filter-out $(LOGIC_DIR)/server/main.c, $(LOGIC_SERVER)) $(shell find $(TEST_DIR)/server -name "*.c")
 
+all: client server
+
 testCommon: $(LOGIC_COMMON) $(TEST_COMMON)
 	mkdir -p $(OUT_TEST_DIR)
 	$(CC) $(FLAGS) $(INCLUDE) $(DEFINE) $(LOGIC_COMMON) $(TEST_COMMON) -o $(OUT_TEST) $(LIBS)
@@ -49,4 +51,3 @@ server: $(LOGIC_SERVER)
 	mkdir -p $(OUT_DEBUG_DIR_SERVER)
 	$(CC) $(FLAGS) $(INCLUDE) $(DEFINE) $(LOGIC_SERVER) -o $(OUT_DEBUG_SERVER) $(LIBS)
 	
-all: client server
