@@ -351,7 +351,7 @@ void listenForAcks()
                 for (int i = base; i < ackIndex; i++)
                 {
                     currentPad = getLaunchBatteryReference()->battery[i % QUEUE_LEN];
-                    if (currentPad->status != ACKED)
+                    if (isInWindow(ackIndex - 1) && currentPad->status != ACKED)
                     {
                         currentPad->status = ACKED;
                         updateContiguousPads(1);
@@ -394,6 +394,9 @@ void listenForAcks()
                     getSendWindowReference()->base = newBase;
                     getSendWindowReference()->nextSeqNum = newNextSeqNum;
                     logMsg(D, "listenForAcks: updated send window base: %d, nextSeqNum: %d\n", getSendWindowReference()->base, getSendWindowReference()->nextSeqNum);
+
+                    // send window could now contain packets to send;
+                    notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
                 }
 
                 pthread_mutex_unlock(&launchBatteryLock);
@@ -401,8 +404,6 @@ void listenForAcks()
 
                 destroyPacket(ack);
 
-                // send window could now contain packets to send;
-                notifyLauncher(LAUNCHER_EVENT_NEW_PACKETS_IN_SEND_WINDOW);
                 pthread_sigmask(SIG_UNBLOCK, &blockedSignalsWhileAcking, NULL);
 
             }
