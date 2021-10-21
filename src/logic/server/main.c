@@ -20,11 +20,16 @@
 #define MAX_FILENAME_LENTGH 256
 char *program_name;
 
-
+// Data needed by a process (the father process or one of its children) to do it's work and to coordinate with the others
 typedef struct Process_info{
-        int servers_socket;
-        sem_t *s_busy;
-        int pid;
+        
+    /*
+        If father: socket for handling handshake requests 
+        If child: socket for handling client requests
+    */
+    int servers_socket;    
+    sem_t *s_busy;  // Child sets to 0 when it can't handle client requests (it could be busy, or dead lol). 
+    int pid;    // pid of process corresponding to this entry
  } p_i;
 
 typedef struct node{
